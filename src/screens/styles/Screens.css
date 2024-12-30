@@ -992,3 +992,349 @@
 .dm-toggle.active::after {
     transform: translateX(20px);
 } 
+.filter-options {
+    margin: 15px 0;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+}
+
+.filter-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.filter-row:last-child {
+    margin-bottom: 0;
+}
+
+.date-filter {
+    flex: 1;
+}
+
+.text-filter {
+    flex: 1;
+}
+
+.filter-row input[type="date"],
+.filter-row input[type="text"] {
+    width: 100%;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+.filter-row label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.control-group {
+    flex: 1;
+    margin-right: 20px;
+}
+
+.filter-options {
+    margin-top: 15px;
+    background: rgba(32, 34, 37, 0.3);
+    border-radius: 6px;
+    padding: 15px;
+}
+
+.filter-row {
+    margin-bottom: 12px;
+}
+
+.filter-row:last-child {
+    margin-bottom: 0;
+}
+
+.date-range {
+    display: flex;
+    gap: 15px;
+}
+
+.date-filter {
+    flex: 1;
+}
+
+.date-filter input,
+.text-filter input {
+    width: 100%;
+    padding: 8px;
+    background: #40444b;
+    border: 1px solid #202225;
+    border-radius: 4px;
+    color: #dcddde;
+}
+
+.date-filter input:focus,
+.text-filter input:focus {
+    border-color: #7289da;
+    outline: none;
+}
+
+.checkbox-options {
+    display: flex;
+    gap: 20px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #dcddde;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #7289da;
+}
+
+.checkbox-label span {
+    user-select: none;
+}
+
+.advanced-options-toggle {
+    margin: 0 0 5px;
+}
+
+.toggle-btn {
+    background: none;
+    border: none;
+    color: #7289da;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px;
+    font-size: 14px;
+    transition: color 0.2s ease;
+}
+
+.toggle-btn:hover {
+    color: #8ea1e1;
+}
+
+.toggle-arrow {
+    display: inline-block;
+    transition: transform 0.2s ease;
+    font-size: 12px;
+}
+
+.filter-options {
+    max-height: 500px;
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    opacity: 1;
+}
+
+.filter-options.collapsed {
+    max-height: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Update controls-section to have proper spacing */
+.controls-section {
+    margin-bottom: 1rem;
+}
+
+.controls-section:last-child {
+    margin-bottom: 0;
+}
+
+.advanced-section {
+    margin: 15px 0;
+}
+
+.filter-options {
+    margin-top: 10px;
+}
+
+.filter-row {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.date-filter, .text-filter {
+    flex: 1;
+}
+
+.date-filter input {
+    width: 100%;
+    min-width: 130px;
+}
+
+.text-filter input {
+    width: 100%;
+}
+
+.checkbox-options {
+    display: flex;
+    gap: 15px;
+    white-space: nowrap;
+}
+
+/* Stack items on smaller screens */
+@media (max-width: 1200px) {
+    .filter-row {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .checkbox-options {
+        flex-direction: column;
+    }
+}
+
+/* Advanced Options Styling */
+.advanced-options-toggle {
+    border-top: 1px solid #40444b;
+    margin-top: 15px;
+    padding-top: 15px;
+}
+
+.toggle-btn {
+    width: 100%;
+    background: #36393f;
+    border: 1px solid #40444b;
+    color: #dcddde;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background-color 0.2s ease;
+}
+
+.toggle-btn:hover {
+    background: #40444b;
+}
+
+.toggle-arrow {
+    color: #7289da;
+    transition: transform 0.2s ease;
+}
+
+.filter-options {
+    background: #36393f;
+    border: 1px solid #40444b;
+    border-radius: 4px;
+    margin-top: 10px;
+    padding: 15px;
+    transition: all 0.3s ease;
+}
+
+.filter-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 15px;
+}
+
+.date-filter, .text-filter {
+    flex: 1;
+}
+
+.date-filter label, .text-filter label {
+    display: block;
+    color: #b9bbbe;
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.date-filter input, .text-filter input {
+    width: 100%;
+    padding: 8px 12px;
+    background: #40444b;
+    border: 1px solid #202225;
+    border-radius: 4px;
+    color: #dcddde;
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease;
+}
+
+.date-filter input:focus, .text-filter input:focus {
+    border-color: #7289da;
+    outline: none;
+}
+
+.checkbox-row {
+    display: flex;
+    gap: 20px;
+    padding-top: 5px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #b9bbbe;
+    cursor: pointer;
+    user-select: none;
+    font-size: 0.9rem;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #7289da;
+}
+
+.filter-options.collapsed {
+    max-height: 0;
+    padding: 0;
+    margin: 0;
+    opacity: 0;
+    border: none;
+    pointer-events: none;
+}
+
+/* Animation for the arrow */
+.toggle-btn[aria-expanded="true"] .toggle-arrow {
+    transform: rotate(90deg);
+}
+
+.channel-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.refresh-btn {
+    background: #4f545c;
+    border: none;
+    padding: 6px;
+    cursor: pointer;
+    color: #dcddde;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.refresh-btn:hover {
+    background: #686d73;
+    color: white;
+}
+
+.refresh-btn:active {
+    background: #43464d;
+    transform: translateY(1px);
+}
+
+.refresh-btn.spinning svg {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}

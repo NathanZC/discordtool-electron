@@ -315,6 +315,92 @@ class DiscordAPI {
         return stopDeletion();
     }
 
+    async closeDM(channelId) {
+        try {
+            const response = await this.makeRequest(
+                `/channels/${channelId}`,
+                {
+                    method: 'DELETE'
+                }
+            );
+
+            if (response.status === 200) {
+                return true;
+            }
+
+            throw new Error(`Failed to close DM: ${response.status}`);
+        } catch (error) {
+            console.error('Error closing DM:', error);
+            throw error;
+        }
+    }
+
+    async getMessageCountForUser(channelId, authorId = null) {
+        const headers = {
+            Authorization: this.token
+        };
+        
+        const params = new URLSearchParams();
+        if (authorId) {
+            params.append('author_id', authorId);
+        }
+
+        async function getMessageCount(url, params, delay = 1000, maxRetries = 5) {
+            let retryCount = 0;
+            
+            while (retryCount < maxRetries) {
+                try {
+                    const response = await fetch(`${url}?${params.toString()}`, { headers });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        return data.total_results || 0;
+                    } else if (response.status === 429) {
+                        const retryAfter = parseInt(response.headers.get('Retry-After') || delay/1000) + 1;
+                        console.log(`Rate limited. Retrying in ${retryAfter} seconds...`);
+                        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+                        retryCount++;
+                        delay *= 2; // Exponential backoff
+                    } else {
+                        console.error(`Failed to fetch messages: ${response.status} - ${await response.text()}`);
+                        return null;
+                    }
+                } catch (error) {
+                    console.error('Error fetching message count:', error);
+                    retryCount++;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+            
+            console.log('Max retries reached. Returning null.');
+            return null;
+        }
+
+        try {
+            // Check channel type
+            const channelResponse = await this.makeRequest(`/channels/${channelId}`);
+            if (!channelResponse.ok) {
+                throw new Error(`Failed to get channel info: ${channelResponse.status}`);
+            }
+
+            const channelData = await channelResponse.json();
+            let url;
+
+            if (channelData.type === 0) { // Guild channel
+                const serverId = channelData.guild_id;
+                url = `${this.baseURL}/guilds/${serverId}/messages/search`;
+                params.append('channel_id', channelId);
+            } else { // DM channel
+                url = `${this.baseURL}/channels/${channelId}/messages/search`;
+            }
+
+            return await getMessageCount(url, params);
+        } catch (error) {
+            console.error('Error in getMessageCountForUser:', error);
+            return null;
+        }
+    }
+
 }
 
 module.exports = DiscordAPI; 
