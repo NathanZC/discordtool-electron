@@ -1,0 +1,19 @@
+#navigation {
+    background: #2C2F33;
+    padding: 10px;
+    display: flex;
+    gap: 10px;
+}
+
+.nav-button {
+    background: #7289DA;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.nav-button:hover {
+    background: #677BC4;
+} 
