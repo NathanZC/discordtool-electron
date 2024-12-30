@@ -2,6 +2,7 @@ const path = require('path');
 const Store = require('electron-store');
 const appPath = process.cwd();
 const { DiscordAPI } = require(path.join(appPath, 'src', 'utils', 'discord.js'));
+const Navigation = require(path.join(appPath, 'src', 'components', 'Navigation.js'));
 
 class AuthScreen {
     constructor() {
@@ -69,11 +70,36 @@ class AuthScreen {
                 this.store.delete('discord_token');
             }
             this.showStatus('Connected successfully!', 'success');
+            
+            // Add navigation after successful auth
+            setTimeout(() => {
+                this.navigateToApp(token);
+            }, 1000); // Short delay to show success message
+            
             return true;
         } else {
             this.showError('Invalid auth token');
             return false;
         }
+    }
+
+    navigateToApp(token) {
+        const content = document.getElementById('content');
+        
+        // Clear existing content
+        content.innerHTML = '';
+        
+        // Initialize navigation
+        const nav = new Navigation(token);
+        nav.render();
+        
+        // Add main content container
+        const mainContent = document.createElement('div');
+        mainContent.id = 'main-content';
+        content.appendChild(mainContent);
+        
+        // Load initial screen (you can modify this to load whatever screen you want first)
+        nav.navigateTo('home'); // Assuming 'home' is your first screen
     }
 
     setupEventListeners() {

@@ -1,34 +1,53 @@
 class Navigation {
-    constructor() {
-        this.screens = [
-            { id: 'dashboard', label: 'Dashboard' },
-            { id: 'message-cleaner', label: 'Message Cleaner' },
-            { id: 'server-manager', label: 'Server Manager' },
-            { id: 'user-search', label: 'User Search' },
-            { id: 'settings', label: 'Settings' },
-            { id: 'about', label: 'About' }
-        ];
-        this.init();
+    constructor(token) {
+        this.token = token;
+        this.currentScreen = null;
     }
 
-    init() {
-        const nav = document.getElementById('navigation');
-        nav.innerHTML = this.screens.map(screen => `
-            <button class="nav-button" data-screen="${screen.id}">
-                ${screen.label}
-            </button>
-        `).join('');
+    render() {
+        const content = document.getElementById('content');
+        const nav = document.createElement('nav');
+        nav.className = 'main-nav';
+        nav.innerHTML = `
+            <ul>
+                <li><a href="#" data-screen="home">Home</a></li>
+                <li><a href="#" data-screen="messages">Messages</a></li>
+                <li><a href="#" data-screen="settings">Settings</a></li>
+                <li><a href="#" data-screen="logout">Logout</a></li>
+            </ul>
+        `;
 
+        content.insertBefore(nav, content.firstChild);
+        this.setupEventListeners();
+    }
+
+    setupEventListeners() {
+        const nav = document.querySelector('.main-nav');
         nav.addEventListener('click', (e) => {
-            if (e.target.classList.contains('nav-button')) {
-                this.loadScreen(e.target.dataset.screen);
+            if (e.target.tagName === 'A') {
+                e.preventDefault();
+                const screen = e.target.getAttribute('data-screen');
+                this.navigateTo(screen);
             }
         });
     }
 
-    loadScreen(screenId) {
-        // Implementation for screen loading
+    navigateTo(screen) {
+        const mainContent = document.getElementById('main-content');
+        
+        // Handle logout separately
+        if (screen === 'logout') {
+            // Clear token and reload to auth screen
+            const store = new Store();
+            store.delete('discord_token');
+            window.location.reload();
+            return;
+        }
+
+        // Here you would load the appropriate screen component
+        mainContent.innerHTML = `<h1>${screen.charAt(0).toUpperCase() + screen.slice(1)} Screen</h1>`;
+        this.currentScreen = screen;
     }
 }
 
-new Navigation(); 
+module.exports = Navigation; 
