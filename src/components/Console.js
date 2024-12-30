@@ -1,22 +1,61 @@
 class Console {
-    constructor(containerId) {
-        this.container = document.getElementById(containerId);
-        this.init();
-    }
+    static init() {
+        const consoleContent = document.getElementById('console-content');
+        if (!consoleContent) return;
 
-    init() {
-        this.container.innerHTML = `
-            <div class="console-window">
-                <div class="console-output"></div>
+        consoleContent.innerHTML = `
+            <h2>Console</h2>
+            <div class="console-section">
+                <div class="console-output" id="consoleOutput">
+                    <!-- Console messages will appear here -->
+                </div>
             </div>
         `;
     }
 
-    log(message) {
-        const output = this.container.querySelector('.console-output');
-        const logEntry = document.createElement('div');
-        logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-        output.appendChild(logEntry);
-        output.scrollTop = output.scrollHeight;
+    static show() {
+        const consoleContent = document.getElementById('console-content');
+        if (consoleContent) {
+            consoleContent.style.display = 'flex';
+        }
     }
-} 
+
+    static hide() {
+        const consoleContent = document.getElementById('console-content');
+        if (consoleContent) {
+            consoleContent.style.display = 'none';
+        }
+    }
+
+    static log(message, type = 'info') {
+        const consoleOutput = document.getElementById('consoleOutput');
+        if (!consoleOutput) return;
+
+        const logEntry = document.createElement('div');
+        logEntry.className = `console-entry ${type}`;
+        logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        consoleOutput.appendChild(logEntry);
+        consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
+
+    static clear() {
+        const consoleOutput = document.getElementById('consoleOutput');
+        if (consoleOutput) {
+            consoleOutput.innerHTML = '';
+        }
+    }
+
+    static success(message) {
+        this.log(message, 'success');
+    }
+
+    static error(message) {
+        this.log(message, 'error');
+    }
+
+    static warn(message) {
+        this.log(message, 'warning');
+    }
+}
+
+module.exports = Console; 

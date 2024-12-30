@@ -1,7 +1,7 @@
 const path = require('path');
 const Store = require('electron-store');
 const appPath = process.cwd();
-const { DiscordAPI } = require(path.join(appPath, 'src', 'utils', 'discord.js'));
+const DiscordAPI  = require(path.join(appPath, 'src', 'utils', 'discord.js'));
 const Navigation = require(path.join(appPath, 'src', 'components', 'Navigation.js'));
 
 class AuthScreen {
@@ -49,32 +49,35 @@ class AuthScreen {
     }
 
     async checkSavedToken() {
-        const savedToken = this.store.get('discord_token');
-        if (savedToken) {
+        const savedAuth = this.store.get('discord_token');
+        if (savedAuth && savedAuth.token) {
             const authInput = document.getElementById('authKey');
             const rememberMe = document.getElementById('rememberMe');
-            authInput.value = savedToken;
+            authInput.value = savedAuth.token;
             rememberMe.checked = true;
         }
     }
 
     async handleAuth(token) {
         const discord = new DiscordAPI(token);
-        const isValid = await discord.verifyToken(token);
+        const { isValid, userId } = await discord.verifyToken(token);
         
         if (isValid) {
             const rememberMe = document.getElementById('rememberMe');
             if (rememberMe.checked) {
-                this.store.set('discord_token', token);
+                this.store.set('discord_token', {
+                    token: token,
+                    userId: userId,
+                    lastUsed: new Date().toISOString()
+                });
             } else {
                 this.store.delete('discord_token');
             }
             this.showStatus('Connected successfully!', 'success');
             
-            // Add navigation after successful auth
             setTimeout(() => {
-                this.navigateToApp(token);
-            }, 1000); // Short delay to show success message
+                this.navigateToApp(token, userId);
+            }, 1000);
             
             return true;
         } else {
@@ -83,14 +86,14 @@ class AuthScreen {
         }
     }
 
-    navigateToApp(token) {
+    navigateToApp(token, userId) {
         const content = document.getElementById('content');
         
         // Clear existing content
         content.innerHTML = '';
         
-        // Initialize navigation
-        const nav = new Navigation(token);
+        // Initialize navigation with both token and userId
+        const nav = new Navigation(token, userId);
         nav.render();
         
         // Add main content container
@@ -98,8 +101,8 @@ class AuthScreen {
         mainContent.id = 'main-content';
         content.appendChild(mainContent);
         
-        // Load initial screen (you can modify this to load whatever screen you want first)
-        nav.navigateTo('home'); // Assuming 'home' is your first screen
+        // Load initial screen
+        nav.navigateTo('home');
     }
 
     setupEventListeners() {

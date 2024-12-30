@@ -4,10 +4,12 @@ const ServersScreen = require('../screens/ServersScreen');
 const ClosedDMsScreen = require('../screens/ClosedDMsScreen');
 const WipeScreen = require('../screens/WipeScreen');
 const HelpScreen = require('../screens/HelpScreen');
+const Console = require('./Console');
 
 class Navigation {
-    constructor(token) {
+    constructor(token, userId) {
         this.token = token;
+        this.userId = userId;
         this.currentScreen = null;
         this.menuItems = [
             { id: 'open-dms', label: 'View Open DMs', icon: '💬' },
@@ -21,53 +23,40 @@ class Navigation {
     render() {
         const content = document.getElementById('content');
         
-        // Create sidebar container
-        const sidebar = document.createElement('nav');
-        sidebar.className = 'sidebar';
-        
-        // Create logo/brand section
-        const brand = document.createElement('div');
-        brand.className = 'brand';
-        brand.innerHTML = `
-            <div class="logo">DT</div>
-            <div class="brand-text">Discord Tool</div>
+        // Create the app layout with proper sidebar structure
+        content.innerHTML = `
+            <div class="app-layout">
+                <nav class="sidebar">
+                    <div class="brand">
+                        <div class="logo">DT</div>
+                        <div class="brand-text">Discord Tool</div>
+                    </div>
+                    <ul class="menu-list">
+                        ${this.menuItems.map(item => `
+                            <li class="menu-item" data-screen="${item.id}">
+                                <span class="icon">${item.icon}</span>
+                                <span class="label">${item.label}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                    <div class="logout-section">
+                        <button class="logout-btn" data-screen="logout">
+                            <span class="icon">🚪</span>
+                            <span class="label">Logout</span>
+                        </button>
+                    </div>
+                </nav>
+                <div id="main-content">
+                    <!-- Main screen content will be rendered here -->
+                </div>
+                <div id="console-content">
+                    <!-- Console will be rendered here -->
+                </div>
+            </div>
         `;
         
-        // Create menu items
-        const menuList = document.createElement('ul');
-        menuList.className = 'menu-list';
-        
-        menuList.innerHTML = this.menuItems.map(item => `
-            <li class="menu-item" data-screen="${item.id}">
-                <span class="icon">${item.icon}</span>
-                <span class="label">${item.label}</span>
-            </li>
-        `).join('');
-        
-        // Create logout button
-        const logout = document.createElement('div');
-        logout.className = 'logout-section';
-        logout.innerHTML = `
-            <button class="logout-btn" data-screen="logout">
-                <span class="icon">🚪</span>
-                <span class="label">Logout</span>
-            </button>
-        `;
-        
-        // Assemble sidebar
-        sidebar.appendChild(brand);
-        sidebar.appendChild(menuList);
-        sidebar.appendChild(logout);
-        
-        // Create main content area
-        const mainContent = document.createElement('div');
-        mainContent.id = 'main-content';
-        
-        // Clear and set up new layout
-        content.innerHTML = '';
-        content.className = 'app-layout';
-        content.appendChild(sidebar);
-        content.appendChild(mainContent);
+        // Initialize console once
+        Console.init();
         
         this.setupEventListeners();
 
@@ -116,29 +105,35 @@ class Navigation {
         // Clear existing content
         mainContent.innerHTML = '';
 
-        // Load the appropriate screen content
+        // Show/hide console based on screen
         switch(screen) {
             case 'open-dms':
-                const openDMsScreen = new OpenDMsScreen(this.token);
+                Console.show();
+                const openDMsScreen = new OpenDMsScreen(this.token, this.userId);
                 openDMsScreen.render(mainContent);
                 break;
             case 'servers':
-                const serversScreen = new ServersScreen(this.token);
+                Console.show();
+                const serversScreen = new ServersScreen(this.token, this.userId);
                 serversScreen.render(mainContent);
                 break;
             case 'closed-dms':
-                const closedDMsScreen = new ClosedDMsScreen(this.token);
+                Console.show();
+                const closedDMsScreen = new ClosedDMsScreen(this.token, this.userId);
                 closedDMsScreen.render(mainContent);
                 break;
             case 'wipe':
-                const wipeScreen = new WipeScreen(this.token);
+                Console.show();
+                const wipeScreen = new WipeScreen(this.token, this.userId);
                 wipeScreen.render(mainContent);
                 break;
             case 'help':
-                const helpScreen = new HelpScreen(this.token);
+                Console.hide(); // Hide console for help screen
+                const helpScreen = new HelpScreen(this.token, this.userId);
                 helpScreen.render(mainContent);
                 break;
             default:
+                Console.hide(); // Hide by default
                 mainContent.innerHTML = `<h1>${this.getScreenTitle(screen)}</h1>`;
         }
         
