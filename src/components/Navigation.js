@@ -1,4 +1,10 @@
 const Store = require('electron-store');
+const OpenDMsScreen = require('../screens/OpenDMsScreen');
+const ServersScreen = require('../screens/ServersScreen');
+const ClosedDMsScreen = require('../screens/ClosedDMsScreen');
+const WipeScreen = require('../screens/WipeScreen');
+const HelpScreen = require('../screens/HelpScreen');
+
 class Navigation {
     constructor(token) {
         this.token = token;
@@ -64,6 +70,15 @@ class Navigation {
         content.appendChild(mainContent);
         
         this.setupEventListeners();
+
+        // Load initial screen (View Open DMs)
+        const initialMenuItem = document.querySelector('.menu-item[data-screen="open-dms"]');
+        if (initialMenuItem) {
+            initialMenuItem.classList.add('active');
+            setTimeout(() => {
+                this.navigateTo('open-dms');
+            }, 0);
+        }
     }
 
     setupEventListeners() {
@@ -98,8 +113,35 @@ class Navigation {
             return;
         }
 
-        // Here you would load the appropriate screen component
-        mainContent.innerHTML = `<h1>${this.getScreenTitle(screen)}</h1>`;
+        // Clear existing content
+        mainContent.innerHTML = '';
+
+        // Load the appropriate screen content
+        switch(screen) {
+            case 'open-dms':
+                const openDMsScreen = new OpenDMsScreen(this.token);
+                openDMsScreen.render(mainContent);
+                break;
+            case 'servers':
+                const serversScreen = new ServersScreen(this.token);
+                serversScreen.render(mainContent);
+                break;
+            case 'closed-dms':
+                const closedDMsScreen = new ClosedDMsScreen(this.token);
+                closedDMsScreen.render(mainContent);
+                break;
+            case 'wipe':
+                const wipeScreen = new WipeScreen(this.token);
+                wipeScreen.render(mainContent);
+                break;
+            case 'help':
+                const helpScreen = new HelpScreen(this.token);
+                helpScreen.render(mainContent);
+                break;
+            default:
+                mainContent.innerHTML = `<h1>${this.getScreenTitle(screen)}</h1>`;
+        }
+        
         this.currentScreen = screen;
     }
 
