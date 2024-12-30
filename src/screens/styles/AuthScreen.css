@@ -162,4 +162,140 @@
 
 #main-content {
     padding: 1rem;
+}
+
+.app-layout {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+}
+
+.sidebar {
+    width: 240px;
+    background-color: #2C2F33;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #202225;
+    transition: width 0.3s ease;
+}
+
+.brand {
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-bottom: 1px solid #202225;
+}
+
+.logo {
+    width: 32px;
+    height: 32px;
+    background-color: #7289DA;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+}
+
+.brand-text {
+    color: white;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.menu-list {
+    list-style: none;
+    padding: 1rem 0;
+    margin: 0;
+    flex-grow: 1;
+}
+
+.menu-item {
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #dcddde;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.menu-item:hover {
+    background-color: #404447;
+    color: white;
+}
+
+.menu-item.active {
+    background-color: #404447;
+    color: white;
+    border-left: 3px solid #7289DA;
+}
+
+.icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logout-section {
+    padding: 1rem;
+    border-top: 1px solid #202225;
+}
+
+.logout-btn {
+    width: 100%;
+    padding: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background-color: #36393f;
+    border: none;
+    border-radius: 4px;
+    color: #dcddde;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.logout-btn:hover {
+    background-color: #d83c3e;
+    color: white;
+}
+
+#main-content {
+    flex-grow: 1;
+    background-color: #36393f;
+    padding: 2rem;
+    overflow-y: auto;
+}
+
+/* Add smooth transitions for hover states */
+.menu-item, .logout-btn {
+    transition: all 0.2s ease-in-out;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 60px;
+    }
+    
+    .brand-text,
+    .menu-item .label,
+    .logout-btn .label {
+        display: none;
+    }
+    
+    .menu-item {
+        justify-content: center;
+    }
+    
+    .logout-btn {
+        padding: 0.75rem 0;
+        justify-content: center;
+    }
 } 
