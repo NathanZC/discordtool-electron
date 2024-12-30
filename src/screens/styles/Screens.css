@@ -372,7 +372,7 @@
     display: flex;
     align-items: center;
     gap: 1rem;
-    min-width: 350px;
+    margin-bottom: 0.5rem;
 }
 
 .delay-slider {
@@ -458,7 +458,6 @@
     background: #202225;
     border-radius: 10px;
     overflow: hidden;
-    margin-bottom: 0.5rem;
 }
 
 .progress-fill {
@@ -473,6 +472,8 @@
     justify-content: space-between;
     color: #dcddde;
     font-size: 0.9rem;
+    margin-bottom: 1rem;
+    padding-top: 0.5rem;
 }
 
 .console-section {
@@ -504,8 +505,16 @@
     color: #43b581;
 }
 
+.console-entry.warning {
+    color: #faa61a;
+}
+
 .console-entry.error {
     color: #f04747;
+}
+
+.console-entry.delete {
+    color: #ff73fa;
 }
 
 .dms-container {
@@ -516,12 +525,13 @@
 
 .dms-header {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr 150px auto;
     padding: 1rem;
     background: #202225;
     font-weight: bold;
     color: #fff;
     gap: 1rem;
+    text-align: center;
 }
 
 .dms-list {
@@ -532,13 +542,14 @@
 
 .dm-row {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr 150px auto;
     padding: 0.75rem;
     border-radius: 4px;
     margin-bottom: 0.25rem;
     background: #36393f;
     align-items: center;
     gap: 1rem;
+    text-align: left;
 }
 
 .dm-row:hover {
@@ -546,7 +557,7 @@
 }
 
 .dm-toggle {
-    width: 40px;
+    width: 60px;
     height: 20px;
     background: #4f545c;
     border-radius: 10px;
@@ -729,31 +740,36 @@
     opacity: 0.7;
 }
 
-/* Add a subtle scrollbar to the main content */
-#main-content::-webkit-scrollbar {
+/* Standardized scrollbar styles */
+*::-webkit-scrollbar {
     width: 8px;
 }
 
-#main-content::-webkit-scrollbar-track {
+*::-webkit-scrollbar-track {
     background: #2f3136;
 }
 
-#main-content::-webkit-scrollbar-thumb {
+*::-webkit-scrollbar-thumb {
     background: #202225;
     border-radius: 4px;
 }
 
-#main-content::-webkit-scrollbar-thumb:hover {
+*::-webkit-scrollbar-thumb:hover {
     background: #18191c;
+}
+
+/* Firefox scrollbar styles */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #202225 #2f3136;
 }
 
 /* Add these styles for the OpenDMsScreen */
 
 .controls-section {
     background: #2f3136;
-    padding: 1rem;
+    padding: 0.5rem;
     border-radius: 8px;
-    margin-bottom: 1rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -840,7 +856,6 @@
     background: #2f3136;
     padding: 1rem;
     border-radius: 8px;
-    margin-bottom: 1rem;
 }
 
 .progress-bar {
@@ -894,6 +909,10 @@
     color: #43b581;
 }
 
+.console-entry.warning {
+    color: #faa61a;
+}
+
 .console-entry.error {
     color: #f04747;
 }
@@ -906,23 +925,25 @@
 
 .dms-header {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr 150px auto;
     padding: 1rem;
     background: #202225;
     font-weight: bold;
     color: #fff;
     gap: 1rem;
+    text-align: left;
 }
 
 .dm-row {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr 150px auto;
     padding: 0.75rem;
     border-radius: 4px;
     margin-bottom: 0.25rem;
     background: #36393f;
     align-items: center;
     gap: 1rem;
+    text-align: left;
 }
 
 .dm-row:hover {
@@ -1337,4 +1358,104 @@
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+}
+
+.toggle-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.select-all-btn {
+    background: #4f545c;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: #dcddde;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.2s ease;
+}
+
+.select-all-btn:hover {
+    background: #686d73;
+    color: white;
+}
+
+.dm-count {
+    text-align: center;
+}
+
+.advanced-options-toggle {
+    margin-bottom: 0.5rem;
+}
+
+.filter-options {
+    margin-bottom: 0.5rem;
+}
+
+.controls-group {
+    border-top: 1px solid #40444b;
+    padding-top: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.delay-control {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+}
+
+.advanced-options-toggle {
+    margin-bottom: 0.5rem;
+}
+
+.filter-options {
+    margin-bottom: 0.5rem;
+}
+.dm-username {
+    color: #72767d;
+    font-size: 0.9em;
+}
+
+.search-container {
+    flex: 1;
+    margin: 0 15px;
+}
+
+.dm-search {
+    width: 100%;
+    padding: 5px 10px;
+    border-radius: 4px;
+    border: 1px solid #4f545c;
+    background: #40444b;
+    color: #dcddde;
+    font-size: 14px;
+}
+
+.dm-search:focus {
+    outline: none;
+    border-color: #7289da;
+}
+/* Update the existing dms-header class */
+.dms-header {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    background: #2f3136;
+    border-bottom: 1px solid #202225;
+    font-weight: 500;
+}
+
+.channel-header {
+    display: flex;
+    align-items: center;
+    min-width: 100px;
 }

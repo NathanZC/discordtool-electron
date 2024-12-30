@@ -19,7 +19,7 @@ class OpenDMsScreen extends BaseScreen {
             <div class="screen-container">
                 <h1>View Open DMs</h1>
                 
-                <!-- Progress Section -->
+                <!-- Combined Progress and Controls Section -->
                 <div class="progress-section">
                     <div class="progress-bar">
                         <div class="progress-fill"></div>
@@ -28,32 +28,8 @@ class OpenDMsScreen extends BaseScreen {
                         <span>Progress: <span id="progressCount">0</span>/<span id="totalCount">0</span></span>
                         <span>Estimated Time: <span id="estimatedTime">--:--</span></span>
                     </div>
-                </div>
-                
-                <!-- Main Controls Section -->
-                <div class="controls-section">
-                    <div class="control-group">
-                        <div class="delay-control">
-                            <label for="operationDelay">Delay (seconds):</label>
-                            <input type="range" id="operationDelay" 
-                                min="0.1" max="10" value="1" step="0.1"
-                                class="delay-slider">
-                            <span class="delay-value">1.0s</span>
-                        </div>
-                    </div>
 
-                    <div class="action-buttons">
-                        <button id="getCountsBtn" class="action-btn">
-                            Get Message Counts
-                        </button>
-                        <button id="startBtn" class="action-btn primary">
-                            Start
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Advanced Options as separate section -->
-                <div class="advanced-options-section">
+                    <!-- Advanced Options -->
                     <div class="advanced-options-toggle">
                         <button class="toggle-btn">
                             <span class="toggle-arrow">▶</span>
@@ -87,6 +63,24 @@ class OpenDMsScreen extends BaseScreen {
                             </label>
                         </div>
                     </div>
+
+                    <div class="controls-group">
+                        <div class="delay-control">
+                            <label for="operationDelay">Delay (seconds):</label>
+                            <input type="range" id="operationDelay" 
+                                min="0.1" max="10" value="1" step="0.1"
+                                class="delay-slider">
+                            <span class="delay-value">1.0s</span>
+                        </div>
+                        <div class="action-buttons">
+                            <button id="getCountsBtn" class="action-btn">
+                                Get Message Counts
+                            </button>
+                            <button id="startBtn" class="action-btn primary">
+                                Start
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- DMs List -->
@@ -100,8 +94,13 @@ class OpenDMsScreen extends BaseScreen {
                                 </svg>
                             </button>
                         </div>
+                        <div class="search-container">
+                            <input type="text" id="dmSearch" placeholder="Search DMs..." class="dm-search">
+                        </div>
                         <span>Message Count</span>
-                        <span>Enable</span>
+                        <div class="toggle-header">
+                            <button class="select-all-btn" id="selectAllBtn">Enable All</button>
+                        </div>
                     </div>
                     <div class="dms-list" id="dmsList">
                         <!-- DMs will be loaded here -->
@@ -191,6 +190,54 @@ class OpenDMsScreen extends BaseScreen {
             await this.loadDMs();
             refreshBtn.classList.remove('spinning');
         });
+
+        // Add select all button listener
+        const selectAllBtn = container.querySelector('#selectAllBtn');
+        selectAllBtn.addEventListener('click', () => {
+            const allToggles = container.querySelectorAll('.dm-toggle');
+            const allCheckboxes = container.querySelectorAll('.dm-checkbox');
+            const isAnyUnchecked = Array.from(allCheckboxes).some(checkbox => !checkbox.checked);
+            
+            allToggles.forEach(toggle => {
+                const row = toggle.closest('.dm-row');
+                const checkbox = row.querySelector('.dm-checkbox');
+                const channelId = row.dataset.channelId;
+                const channelName = row.dataset.channelName;
+                
+                if (isAnyUnchecked) {
+                    // Select all unchecked
+                    if (!checkbox.checked) {
+                        toggle.classList.add('active');
+                        checkbox.checked = true;
+                        this.addToQueue(channelId, channelName);
+                    }
+                } else {
+                    // Deselect all
+                    toggle.classList.remove('active');
+                    checkbox.checked = false;
+                    this.removeFromQueue(channelId);
+                }
+            });
+            
+            // Update button text
+            selectAllBtn.textContent = isAnyUnchecked ? 'Deselect All' : 'Select All';
+        });
+
+        // Add search functionality
+        const searchInput = container.querySelector('#dmSearch');
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const dmRows = container.querySelectorAll('.dm-row');
+
+            dmRows.forEach(row => {
+                const recipient = row.querySelector('.dm-recipient').textContent.toLowerCase();
+                if (recipient.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
     }
 
     addToQueue(channelId, channelName) {
@@ -225,14 +272,15 @@ class OpenDMsScreen extends BaseScreen {
             // Clear existing message counts when refreshing
             this.dmQueue = [];
 
-            // Render DMs list with toggle buttons and store username in data attribute
+            // Updated DM row rendering to include both nickname and username
             dmsList.innerHTML = dms.map(dm => {
                 const username = dm.recipients?.[0]?.username || 'Unknown User';
+                const nickname = dm.recipients?.[0]?.global_name || username;
                 return `
                     <div class="dm-row" 
                         data-channel-id="${dm.id}"
                         data-channel-name="${username}">
-                        <span class="dm-recipient">${username}</span>
+                        <span class="dm-recipient">${nickname} <span class="dm-username">(${username})</span></span>
                         <span class="dm-count">-</span>
                         <span class="dm-toggle">
                             <input type="checkbox" class="dm-checkbox" 
@@ -378,7 +426,6 @@ class OpenDMsScreen extends BaseScreen {
                 afterDate: afterSnowflake,
                 contentSearch: containingText || null,
                 onProgress: (current, total) => this.updateProgress(current, total),
-                onLog: (message) => Console.log(message),
                 isRunning: () => this.isRunning
             });
 

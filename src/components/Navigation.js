@@ -12,7 +12,7 @@ class Navigation {
         this.userId = userId;
         this.currentScreen = null;
         this.menuItems = [
-            { id: 'open-dms', label: 'View Open DMs', icon: '💬' },
+            { id: 'open-dms', label: 'Open DMs', icon: '💬' },
             { id: 'servers', label: 'Accessible Servers', icon: '🖥️' },
             { id: 'closed-dms', label: 'Find Closed DMs', icon: '🔍' },
             { id: 'wipe', label: 'Wipe Account', icon: '🗑️' },

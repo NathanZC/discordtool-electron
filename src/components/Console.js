@@ -56,6 +56,10 @@ class Console {
     static warn(message) {
         this.log(message, 'warning');
     }
+
+    static delete(message) {
+        this.log(message, 'delete');
+    }
 }
 
 module.exports = Console; 

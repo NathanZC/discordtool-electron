@@ -1,3 +1,5 @@
+const Console = require('../components/Console');
+
 class DiscordAPI {
     constructor(token, userId = null) {
         this.token = token;
@@ -170,7 +172,6 @@ class DiscordAPI {
         contentSearch = null,
         deleteDelay = 1000,
         onProgress = null,
-        onLog = console.log,
         isRunning = () => true
     }) {
         console.log("deleteChannelMessages started");
@@ -208,14 +209,14 @@ class DiscordAPI {
                 console.log("Search result:", searchResult ? "found messages" : "no messages found");
 
                 if (stuckCount > 5) {
-                    onLog("Seems like we are stuck, restarting deletion for the current DM");
+                    Console.warn("Seems like we are stuck, restarting deletion for the current DM");
                     break;
                 }
 
                 if (!searchResult) {
                     if (!isRunning()) return stopDeletion();
                     await new Promise(resolve => setTimeout(resolve, 10000));
-                    onLog(`No messages found, attempt: ${stuckCount}`);
+                    Console.warn(`No messages found, attempt: ${stuckCount}`);
                     stuckCount++;
                     continue;
                 }
@@ -223,7 +224,7 @@ class DiscordAPI {
                 const { messages, totalResults } = searchResult;
                 if (page === 1) {
                     total = totalResults;
-                    onLog(`Found ${total} messages to process`);
+                    Console.log(`Found ${total} messages to process`);
                 }
 
                 const toDelete = [];
@@ -238,7 +239,7 @@ class DiscordAPI {
                                 channelId: message.channel_id
                             });
                         } else {
-                            onLog("Skipping message because not deletable");
+                            Console.log("Skipping message because not deletable");
                             seen.add(message.id);
                             offset++;
                         }
@@ -247,7 +248,7 @@ class DiscordAPI {
 
                 if (toDelete.length === 0 && offset === lastOffset) {
                     if (total > 0 && seen.size < total) {
-                        onLog("No new messages found, waiting for Discord to index");
+                        Console.warn("No new messages found, waiting for Discord to index");
                         if (!isRunning()) return stopDeletion();
                         await new Promise(resolve => setTimeout(resolve, deleteDelay * 3 + 10000));
                         stuckCount++;
@@ -268,7 +269,7 @@ class DiscordAPI {
                         if (deleted) {
                             deleteMessagesCount++;
                             seen.add(message.id);
-                            onLog(`${channelName}: Deleted message: ${message.content}`);
+                            Console.delete(`${channelName}: Deleted message: ${message.content}`);
                             if (onProgress) {
                                 onProgress(deleteMessagesCount, total);
                             }
@@ -276,10 +277,10 @@ class DiscordAPI {
                             retryCount++;
                             if (retryCount < maxRetries && isRunning()) {
                                 const delayTime = deleteDelay * (Math.pow(2, retryCount)) + 1000;
-                                onLog(`Retry ${retryCount}/${maxRetries} in ${delayTime/1000}s...`);
+                                Console.warn(`Retry ${retryCount}/${maxRetries} in ${delayTime/1000}s...`);
                                 await new Promise(resolve => setTimeout(resolve, delayTime));
                             } else {
-                                onLog('Max retries reached. Skipping message.');
+                                Console.warn('Max retries reached. Skipping message.');
                                 seen.add(message.id);
                                 offset++;
                             }
@@ -291,7 +292,7 @@ class DiscordAPI {
                 }
 
                 if (seen.size >= total) {
-                    onLog(`Finished processing DM channel: ${channelName}`);
+                    Console.success(`Finished processing DM channel: ${channelName}`);
                     return {
                         success: true,
                         deletedCount: deleteMessagesCount,
@@ -301,12 +302,12 @@ class DiscordAPI {
 
                 page++;
                 if (!isRunning()) return stopDeletion();
-                onLog(`Searching next page after ${deleteDelay * 3 + 25000}ms delay`);
+                Console.log(`Searching next page after ${deleteDelay * 3 + 25000}ms delay`);
                 await new Promise(resolve => setTimeout(resolve, deleteDelay * 3 + 25000));
 
             } catch (error) {
                 console.error("Error in deletion loop:", error);
-                onLog(`Error processing messages: ${error.message}`);
+                Console.error(`Error processing messages: ${error.message}`);
                 if (!isRunning()) return stopDeletion();
                 await new Promise(resolve => setTimeout(resolve, deleteDelay * 2));
             }
