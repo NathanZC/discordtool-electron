@@ -414,14 +414,13 @@ class OpenDMsScreen extends BaseScreen {
             const containingText = document.querySelector('#containingText').value;
             const closeDm = document.querySelector('#closeDm').checked;
 
-            // Convert dates to Discord snowflake format if provided
             const beforeSnowflake = beforeDate ? (BigInt(new Date(beforeDate).getTime() - 1420070400000) << 22n).toString() : null;
             const afterSnowflake = afterDate ? (BigInt(new Date(afterDate).getTime() - 1420070400000) << 22n).toString() : null;
 
             const result = await this.api.deleteChannelMessages({
                 channelId: dm.id,
                 channelName: dm.name,
-                deleteDelay: this.operationDelay,
+                deleteDelay: () => this.operationDelay, // Pass as function to get current value
                 beforeDate: beforeSnowflake,
                 afterDate: afterSnowflake,
                 contentSearch: containingText || null,

@@ -170,7 +170,7 @@ class DiscordAPI {
         beforeDate = null, 
         afterDate = null, 
         contentSearch = null,
-        deleteDelay = 1000,
+        deleteDelay = () => 1000,
         onProgress = null,
         isRunning = () => true
     }) {
@@ -250,7 +250,7 @@ class DiscordAPI {
                     if (total > 0 && seen.size < total) {
                         Console.warn("No new messages found, waiting for Discord to index");
                         if (!isRunning()) return stopDeletion();
-                        await new Promise(resolve => setTimeout(resolve, deleteDelay * 3 + 10000));
+                        await new Promise(resolve => setTimeout(resolve, deleteDelay() * 3 + 10000));
                         stuckCount++;
                         continue;
                     }
@@ -276,7 +276,8 @@ class DiscordAPI {
                         } else {
                             retryCount++;
                             if (retryCount < maxRetries && isRunning()) {
-                                const delayTime = deleteDelay * (Math.pow(2, retryCount)) + 1000;
+                                const currentDelay = typeof deleteDelay === 'function' ? deleteDelay() : deleteDelay;
+                                const delayTime = currentDelay * (Math.pow(2, retryCount)) + 1000;
                                 Console.warn(`Retry ${retryCount}/${maxRetries} in ${delayTime/1000}s...`);
                                 await new Promise(resolve => setTimeout(resolve, delayTime));
                             } else {
@@ -288,7 +289,8 @@ class DiscordAPI {
                     }
 
                     if (!isRunning()) return stopDeletion();
-                    await new Promise(resolve => setTimeout(resolve, deleteDelay));
+                    const currentDelay = typeof deleteDelay === 'function' ? deleteDelay() : deleteDelay;
+                    await new Promise(resolve => setTimeout(resolve, currentDelay));
                 }
 
                 if (seen.size >= total) {
@@ -302,14 +304,14 @@ class DiscordAPI {
 
                 page++;
                 if (!isRunning()) return stopDeletion();
-                Console.log(`Searching next page after ${deleteDelay * 3 + 25000}ms delay`);
-                await new Promise(resolve => setTimeout(resolve, deleteDelay * 3 + 25000));
+                Console.log(`Searching next page after ${deleteDelay() * 3 + 25000}ms delay`);
+                await new Promise(resolve => setTimeout(resolve, deleteDelay() * 3 + 25000));
 
             } catch (error) {
                 console.error("Error in deletion loop:", error);
                 Console.error(`Error processing messages: ${error.message}`);
                 if (!isRunning()) return stopDeletion();
-                await new Promise(resolve => setTimeout(resolve, deleteDelay * 2));
+                await new Promise(resolve => setTimeout(resolve, deleteDelay() * 2));
             }
         }
 
@@ -336,7 +338,8 @@ class DiscordAPI {
         }
     }
 
-    async getMessageCountForUser(channelId, authorId = null) {
+    async getMessageCountForUser(channelId, authorId = null, isGuild = false) {
+        console.log("getMessageCountForUser started");
         const headers = {
             Authorization: this.token
         };
@@ -345,6 +348,7 @@ class DiscordAPI {
         if (authorId) {
             params.append('author_id', authorId);
         }
+        params.append('include_nsfw', 'true');
 
         async function getMessageCount(url, params, delay = 1000, maxRetries = 5) {
             let retryCount = 0;
@@ -359,6 +363,7 @@ class DiscordAPI {
                     } else if (response.status === 429) {
                         const retryAfter = parseInt(response.headers.get('Retry-After') || delay/1000) + 1;
                         console.log(`Rate limited. Retrying in ${retryAfter} seconds...`);
+                        Console.warn(`Rate limited. Retrying in ${retryAfter} seconds...`);
                         await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
                         retryCount++;
                         delay *= 2; // Exponential backoff
@@ -368,6 +373,7 @@ class DiscordAPI {
                     }
                 } catch (error) {
                     console.error('Error fetching message count:', error);
+                    Console.error('Error fetching message count:', error);
                     retryCount++;
                     await new Promise(resolve => setTimeout(resolve, delay));
                 }
@@ -378,20 +384,11 @@ class DiscordAPI {
         }
 
         try {
-            // Check channel type
-            const channelResponse = await this.makeRequest(`/channels/${channelId}`);
-            if (!channelResponse.ok) {
-                throw new Error(`Failed to get channel info: ${channelResponse.status}`);
-            }
-
-            const channelData = await channelResponse.json();
             let url;
-
-            if (channelData.type === 0) { // Guild channel
-                const serverId = channelData.guild_id;
-                url = `${this.baseURL}/guilds/${serverId}/messages/search`;
-                params.append('channel_id', channelId);
-            } else { // DM channel
+            if (isGuild) {
+                // For guild searches, we use the serverId directly
+                url = `${this.baseURL}/guilds/${channelId}/messages/search`;
+            } else {
                 url = `${this.baseURL}/channels/${channelId}/messages/search`;
             }
 
@@ -399,6 +396,23 @@ class DiscordAPI {
         } catch (error) {
             console.error('Error in getMessageCountForUser:', error);
             return null;
+        }
+    }
+
+    async getAllAccessibleServers() {
+        try {
+            const response = await this.makeRequest('/users/@me/guilds');
+            if (!response.ok) {
+                throw new Error(`Failed to fetch servers: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            // Sort servers by name
+            return data.sort((a, b) => a.name.localeCompare(b.name));
+        } catch (error) {
+            console.error('Failed to fetch servers:', error);
+            throw error;
         }
     }
 
