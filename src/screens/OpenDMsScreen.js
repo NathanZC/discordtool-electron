@@ -400,7 +400,7 @@ class OpenDMsScreen extends BaseScreen {
             this.updateButtonState(false, true);  // Re-enable button
             return;
         }
-
+        
         Console.log(`Starting deletion process for ${this.dmQueue.length} DMs:`);
         
         for (const dm of this.dmQueue) {
@@ -418,8 +418,9 @@ class OpenDMsScreen extends BaseScreen {
             const afterSnowflake = afterDate ? (BigInt(new Date(afterDate).getTime() - 1420070400000) << 22n).toString() : null;
 
             const result = await this.api.deleteChannelMessages({
-                channelId: dm.id,
+                channelOrGuildId: dm.id,
                 channelName: dm.name,
+                authorId: this.api.userId,
                 deleteDelay: () => this.operationDelay, // Pass as function to get current value
                 beforeDate: beforeSnowflake,
                 afterDate: afterSnowflake,

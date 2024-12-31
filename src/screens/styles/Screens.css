@@ -1034,8 +1034,48 @@
     flex: 1;
 }
 
-.text-filter {
+.text-filter-uid {
     flex: 1;
+    margin-top: 8px;
+    display: none; /* Hide by default */
+}
+
+.text-filter-uid.visible {
+    display: block; /* Show when .visible class is added */
+}
+
+.text-filter-uid label {
+    display: block;
+    color: #b9bbbe;
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.text-filter-uid input {
+    width: 100%;
+    padding: 8px 12px;
+    background: #40444b;
+    border: 1px solid #202225;
+    border-radius: 4px;
+    color: #dcddde;
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease;
+}
+
+.text-filter-uid input:focus {
+    border-color: #7289da;
+    outline: none;
+}
+
+.text-filter-uid input:disabled {
+    background: #36393f;
+    color: #72767d;
+    cursor: not-allowed;
+}
+
+.text-filter-uid input::placeholder {
+    color: #72767d;
 }
 
 .filter-row input[type="date"],
@@ -1458,4 +1498,25 @@
     display: flex;
     align-items: center;
     min-width: 100px;
+}
+
+.user-filter {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.user-filter .text-filter {
+    margin-left: 24px; /* Aligns with checkbox text */
+}
+.checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.checkbox-row {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
 }

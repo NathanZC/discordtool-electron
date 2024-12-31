@@ -17,3 +17,53 @@
 .nav-button:hover {
     background: #677BC4;
 } 
+
+.brand {
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    width: 100%;
+}
+
+.brand-header {
+    margin-bottom: 10px;
+}
+
+.brand-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.logo {
+    color: #fff;
+}
+
+.brand-text {
+    color: #fff;
+    font-size: 14px;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    margin-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    width: 100%;
+}
+
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.username {
+    color: #fff;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

@@ -60,14 +60,14 @@ class AuthScreen {
 
     async handleAuth(token) {
         const discord = new DiscordAPI(token);
-        const { isValid, userId } = await discord.verifyToken(token);
+        const response = await discord.verifyToken(token);
         
-        if (isValid) {
+        if (response.isValid) {
             const rememberMe = document.getElementById('rememberMe');
             if (rememberMe.checked) {
                 this.store.set('discord_token', {
                     token: token,
-                    userId: userId,
+                    userId: response.userId,
                     lastUsed: new Date().toISOString()
                 });
             } else {
@@ -76,7 +76,7 @@ class AuthScreen {
             this.showStatus('Connected successfully!', 'success');
             
             setTimeout(() => {
-                this.navigateToApp(token, userId);
+                this.navigateToApp(token, response.userId, response.userData);
             }, 1000);
             
             return true;
@@ -86,22 +86,18 @@ class AuthScreen {
         }
     }
 
-    navigateToApp(token, userId) {
+    navigateToApp(token, userId, userData) {
         const content = document.getElementById('content');
-        
-        // Clear existing content
         content.innerHTML = '';
         
-        // Initialize navigation with both token and userId
-        const nav = new Navigation(token, userId);
+        // Initialize navigation with token, userId, and userData
+        const nav = new Navigation(token, userId, userData);
         nav.render();
         
-        // Add main content container
         const mainContent = document.createElement('div');
         mainContent.id = 'main-content';
         content.appendChild(mainContent);
         
-        // Load initial screen
         nav.navigateTo('home');
     }
 

@@ -51,12 +51,25 @@ class ServersScreen extends BaseScreen {
                                 <label for="containingText">Containing Text:</label>
                                 <input type="text" id="containingText" placeholder="Search text...">
                             </div>
+                            <div class="text-filter">
+                                <label for="channelId">Channel ID:</label>
+                                <input type="text" id="channelId" placeholder="Specific channel ID...">
+                            </div>
                         </div>
                         <div class="checkbox-row">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="onlyMe" checked disabled>
-                                <span>Only My Messages</span>
-                            </label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="onlyMe" checked>
+                                    <span>Only My Messages</span>
+                                </label>
+                                <div class="text-filter-uid" id="userIdsContainer" style="display: none;">
+                                    <label for="customUserIds">From User IDs:</label>
+                                    <input type="text" id="customUserIds" 
+                                        placeholder="Comma-separated user IDs..."
+                                        title="Enter comma-separated user IDs, or leave empty to include messages from all users"
+                                        disabled>
+                                </div>
+                            </div>
                             <label class="checkbox-label">
                                 <input type="checkbox" id="leaveServer">
                                 <span>Leave Server After Delete</span>
@@ -218,48 +231,62 @@ class ServersScreen extends BaseScreen {
         // Add select all button listener
         const selectAllBtn = container.querySelector('#selectAllBtn');
         selectAllBtn.addEventListener('click', () => {
-            const allToggles = container.querySelectorAll('.dm-toggle');
             const allCheckboxes = container.querySelectorAll('.dm-checkbox');
             const isAnyUnchecked = Array.from(allCheckboxes).some(checkbox => !checkbox.checked);
             
-            allToggles.forEach(toggle => {
-                const row = toggle.closest('.dm-row');
+            allCheckboxes.forEach(checkbox => {
+                const row = checkbox.closest('.dm-row');
+                const toggle = row.querySelector('.dm-toggle');
                 const serverId = row.dataset.serverId;
                 const serverName = row.dataset.serverName;
                 
                 if (isAnyUnchecked) {
                     // Select all unchecked
-                    if (!checkbox.checked) {
-                        toggle.classList.add('active');
-                        checkbox.checked = true;
-                        this.addToQueue(serverId, serverName);
-                    }
+                    checkbox.checked = true;
+                    toggle.classList.add('active');
+                    this.addToQueue(serverId, serverName);
                 } else {
                     // Deselect all
-                    toggle.classList.remove('active');
                     checkbox.checked = false;
+                    toggle.classList.remove('active');
                     this.removeFromQueue(serverId);
                 }
             });
             
             // Update button text
-            selectAllBtn.textContent = isAnyUnchecked ? 'Deselect All' : 'Select All';
+            selectAllBtn.textContent = isAnyUnchecked ? 'Disable All' : 'Enable All';
         });
 
         // Add search functionality
         const searchInput = container.querySelector('#serverSearch');
         searchInput.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
+            const searchTerm = e.target.value.toLowerCase().trim();
             const serverRows = container.querySelectorAll('.dm-row');
 
             serverRows.forEach(row => {
-                const serverName = row.querySelector('.server-name').textContent.toLowerCase();
-                if (serverName.includes(searchTerm)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
+                const serverName = row.querySelector('.dm-recipient').textContent.toLowerCase();
+                row.style.display = serverName.includes(searchTerm) ? '' : 'none';
             });
+
+            // Update "Enable All" button to only consider visible rows
+            const selectAllBtn = container.querySelector('#selectAllBtn');
+            const visibleCheckboxes = Array.from(serverRows).filter(row => row.style.display !== 'none')
+                .map(row => row.querySelector('.dm-checkbox'));
+            
+            if (visibleCheckboxes.length > 0) {
+                const allVisible = visibleCheckboxes.every(checkbox => checkbox.checked);
+                selectAllBtn.textContent = allVisible ? 'Disable All' : 'Enable All';
+            }
+        });
+
+        // Update user IDs input toggle
+        const onlyMeCheckbox = container.querySelector('#onlyMe');
+        const customUserIdsInput = container.querySelector('#customUserIds');
+        const userIdsContainer = container.querySelector('#userIdsContainer');
+        
+        onlyMeCheckbox.addEventListener('change', (e) => {
+            customUserIdsInput.disabled = e.target.checked;
+            userIdsContainer.style.display = e.target.checked ? 'none' : 'block';
         });
     }
 
@@ -384,6 +411,119 @@ class ServersScreen extends BaseScreen {
                 }
             }
         }
+    }
+
+    toggleOperation(button) {
+        // Check for empty queue before starting
+        if (!this.isRunning && this.serverQueue.length === 0) {
+            Console.warn('No servers selected. Please select at least one server to process.');
+            return;
+        }
+
+        const getCountsBtn = document.querySelector('#getCountsBtn');
+        this.isRunning = !this.isRunning;
+        
+        if (this.isRunning) {
+            this.updateButtonState(true, false);
+            getCountsBtn.disabled = true;  // Disable count button
+            this.startDeletion();
+        } else {
+            this.updateButtonState(false, false);
+            this.stopDeletion();
+        }
+    }
+
+    updateButtonState(isRunning, enableButton = true) {
+        const startBtn = document.querySelector('#startBtn');
+        const getCountsBtn = document.querySelector('#getCountsBtn');
+        
+        if (isRunning) {
+            startBtn.textContent = 'Stop';
+            startBtn.classList.add('danger');
+            startBtn.disabled = false;
+            getCountsBtn.disabled = true;  // Disable count button while running
+        } else {
+            startBtn.textContent = 'Start';
+            startBtn.classList.remove('danger');
+            startBtn.disabled = !enableButton;
+            getCountsBtn.disabled = false;  // Re-enable count button
+        }
+    }
+
+    stopDeletion() {
+        this.isRunning = false;
+        Console.warn('Stopping deletion process...');
+        const getCountsBtn = document.querySelector('#getCountsBtn');
+        getCountsBtn.disabled = false;  // Re-enable count button
+        this.updateButtonState(false, true);  // Reset button state to "Start"
+    }
+
+    async startDeletion() {
+        const beforeDate = document.querySelector('#beforeDate').value;
+        const afterDate = document.querySelector('#afterDate').value;
+        const containingText = document.querySelector('#containingText').value;
+        const leaveServer = document.querySelector('#leaveServer').checked;
+        const onlyMe = document.querySelector('#onlyMe').checked;
+        const customUserIds = document.querySelector('#customUserIds').value;
+        const channelId = document.querySelector('#channelId').value.trim();
+        
+        // Process user IDs
+        let authorId = null;
+        if (onlyMe) {
+            authorId = this.api.userId;
+        } else if (customUserIds.trim()) {
+            // Convert comma-separated string to array and clean up whitespace
+            authorId = customUserIds.split(',').map(id => id.trim()).filter(id => id);
+        }
+
+        // Convert dates to Discord snowflake IDs if provided
+        const beforeSnowflake = beforeDate ? (BigInt(new Date(beforeDate).getTime() - 1420070400000) << 22n).toString() : null;
+        const afterSnowflake = afterDate ? (BigInt(new Date(afterDate).getTime() - 1420070400000) << 22n).toString() : null;
+
+        Console.log(`Starting deletion process for ${this.serverQueue.length} servers:`);
+
+        for (const server of this.serverQueue) {
+            if (!this.isRunning) break;
+
+            Console.log(`Processing server: ${server.name} (${server.id})`);
+            
+            try {
+                console.log(channelId)
+                const result = await this.api.deleteChannelMessages({
+                    channelOrGuildId: server.id,
+                    channelName: server.name,
+                    authorId: authorId,
+                    beforeDate: beforeSnowflake,
+                    afterDate: afterSnowflake,
+                    contentSearch: containingText || null,
+                    specificChannelId: channelId || null,
+                    deleteDelay: () => this.operationDelay,
+                    onProgress: (deleted, total) => {
+                        this.updateProgress(deleted, total);
+                    },
+                    isRunning: () => this.isRunning,
+                    isGuild: true
+                });
+
+                if (result.stopped) {
+                    Console.warn('Deletion process stopped by user');
+                    break;
+                }
+                console.log("result: ", result, leaveServer)
+                if (result.success && leaveServer) {
+                    await this.api.leaveServer(server.id);
+                    Console.log(`Left server: ${server.name}`);
+                }
+
+            } catch (error) {
+                Console.error(`Error processing server ${server.name}: ${error.message}`);
+            }
+        }
+
+        console.log("Exiting startDeletion, final isRunning:", this.isRunning);
+        this.isRunning = false;
+        Console.success('Operation completed');
+        this.updateButtonState(false, true);
     }
 
     // ... Rest of the methods (getMessageCounts, toggleOperation, startDeletion, etc.) 

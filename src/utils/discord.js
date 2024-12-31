@@ -98,18 +98,30 @@ class DiscordAPI {
         isGuild = false,
         beforeDate = null,
         afterDate = null,
-        content = null
+        content = null,
+        authorId = null,
+        channelId = null
     }) {
         try {
-            if (!this.userId) {
-                throw new Error('User ID is required for searching messages');
-            }
-
             // Build search parameters
             const params = new URLSearchParams();
             
-            // Always include the authenticated user's ID
-            params.append('author_id', this.userId);
+            // Handle authorId as either single ID or array of IDs
+            if (authorId) {
+                if (Array.isArray(authorId)) {
+                    // Discord's search API supports multiple author_id parameters
+                    authorId.forEach(id => params.append('author_id', id));
+                } else {
+                    params.append('author_id', authorId);
+                }
+            } else if (!isGuild) {
+                // For DMs, author_id is required
+                if (!this.userId) {
+                    throw new Error('User ID is required for searching DM messages');
+                }
+                params.append('author_id', this.userId);
+            }
+
             if (offset) params.append('offset', offset);
             if (beforeDate) params.append('max_id', beforeDate);
             if (afterDate) params.append('min_id', afterDate);
@@ -123,6 +135,11 @@ class DiscordAPI {
             // Add include_nsfw for guild searches
             if (isGuild) {
                 params.append('include_nsfw', 'true');
+            }
+
+            // Add channel_id to search parameters if provided
+            if (channelId && isGuild) {
+                params.append('channel_id', channelId);
             }
 
             // Make the request with search parameters
@@ -164,17 +181,19 @@ class DiscordAPI {
     }
 
     async deleteChannelMessages({
-        channelId, 
+        channelOrGuildId, 
         channelName, 
         authorId = null, 
         beforeDate = null, 
         afterDate = null, 
         contentSearch = null,
+        specificChannelId = null,
         deleteDelay = () => 1000,
         onProgress = null,
-        isRunning = () => true
+        isRunning = () => true,
+        isGuild = false
     }) {
-        console.log("deleteChannelMessages started");
+        console.log(`deleteChannelMessages started for ${isGuild ? 'server' : 'channel'}: ${channelName}`);
         const seen = new Set();
         let page = 1;
         let offset = 0;
@@ -197,19 +216,20 @@ class DiscordAPI {
             try {
                 console.log("Searching messages...");
                 const searchResult = await this.searchMessages({
-                    channelOrGuildId: channelId,
-                    authorId,
+                    channelOrGuildId,
                     offset,
-                    isGuild: false,
+                    isGuild,
                     beforeDate,
                     afterDate,
-                    content: contentSearch
+                    content: contentSearch,
+                    authorId: authorId,
+                    channelId: specificChannelId
                 });
 
                 console.log("Search result:", searchResult ? "found messages" : "no messages found");
 
                 if (stuckCount > 5) {
-                    Console.warn("Seems like we are stuck, restarting deletion for the current DM");
+                    Console.warn(`Seems like we are stuck, restarting deletion for the current ${isGuild ? 'server' : 'DM'}`);
                     break;
                 }
 
@@ -294,7 +314,7 @@ class DiscordAPI {
                 }
 
                 if (seen.size >= total) {
-                    Console.success(`Finished processing DM channel: ${channelName}`);
+                    Console.success(`Finished processing dm/server: ${channelName}`);
                     return {
                         success: true,
                         deletedCount: deleteMessagesCount,
@@ -338,7 +358,7 @@ class DiscordAPI {
         }
     }
 
-    async getMessageCountForUser(channelId, authorId = null, isGuild = false) {
+    async getMessageCountForUser(channelId, authorId = null, isGuild = false, specificChannelId = null) {
         console.log("getMessageCountForUser started");
         const headers = {
             Authorization: this.token
@@ -347,6 +367,9 @@ class DiscordAPI {
         const params = new URLSearchParams();
         if (authorId) {
             params.append('author_id', authorId);
+        }
+        if (specificChannelId && isGuild) {
+            params.append('channel_id', specificChannelId);
         }
         params.append('include_nsfw', 'true');
 
@@ -412,6 +435,26 @@ class DiscordAPI {
             return data.sort((a, b) => a.name.localeCompare(b.name));
         } catch (error) {
             console.error('Failed to fetch servers:', error);
+            throw error;
+        }
+    }
+
+    async leaveServer(serverId) {
+        try {
+            const response = await this.makeRequest(
+                `/users/@me/guilds/${serverId}`,
+                {
+                    method: 'DELETE'
+                }
+            );
+
+            if (response.status === 204) {
+                return true;
+            }
+
+            throw new Error(`Failed to leave server: ${response.status}`);
+        } catch (error) {
+            console.error('Error leaving server:', error);
             throw error;
         }
     }
