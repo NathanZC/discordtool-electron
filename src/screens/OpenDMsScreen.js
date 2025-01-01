@@ -77,13 +77,14 @@ class OpenDMsScreen extends BaseScreen {
                                 Get Message Counts
                             </button>
                             <button id="startBtn" class="action-btn primary">
-                                Start
+                                Start Deletion
                             </button>
                         </div>
                     </div>
                 </div>
 
                 <!-- DMs List -->
+                <div class="total-dms">Total: 0 DMs</div>
                 <div class="dms-container">
                     <div class="dms-header">
                         <div class="channel-header">
@@ -198,29 +199,39 @@ class OpenDMsScreen extends BaseScreen {
             const allCheckboxes = container.querySelectorAll('.dm-checkbox');
             const isAnyUnchecked = Array.from(allCheckboxes).some(checkbox => !checkbox.checked);
             
-            allToggles.forEach(toggle => {
-                const row = toggle.closest('.dm-row');
-                const checkbox = row.querySelector('.dm-checkbox');
-                const channelId = row.dataset.channelId;
-                const channelName = row.dataset.channelName;
-                
-                if (isAnyUnchecked) {
-                    // Select all unchecked
-                    if (!checkbox.checked) {
-                        toggle.classList.add('active');
-                        checkbox.checked = true;
-                        this.addToQueue(channelId, channelName);
-                    }
-                } else {
-                    // Deselect all
+            // Clear the queue if we're deselecting all
+            if (!isAnyUnchecked) {
+                this.dmQueue = [];
+                Console.log('Removed all DMs from queue');
+                allToggles.forEach(toggle => {
                     toggle.classList.remove('active');
-                    checkbox.checked = false;
-                    this.removeFromQueue(channelId);
+                    toggle.querySelector('.dm-checkbox').checked = false;
+                });
+            } else {
+                // Build new queue for selecting all
+                const newDMs = [];
+                allToggles.forEach(toggle => {
+                    const row = toggle.closest('.dm-row');
+                    const checkbox = row.querySelector('.dm-checkbox');
+                    const channelId = row.dataset.channelId;
+                    const channelName = row.dataset.channelName;
+                    
+                    toggle.classList.add('active');
+                    checkbox.checked = true;
+                    
+                    if (!this.dmQueue.some(dm => dm.id === channelId)) {
+                        newDMs.push({ id: channelId, name: channelName });
+                    }
+                });
+                
+                if (newDMs.length > 0) {
+                    this.dmQueue.push(...newDMs);
+                    Console.log(`Added ${newDMs.length} DMs to queue. Queue size: ${this.dmQueue.length}`);
                 }
-            });
+            }
             
-            // Update button text
-            selectAllBtn.textContent = isAnyUnchecked ? 'Deselect All' : 'Select All';
+            // Update button text based on the new state after changes
+            selectAllBtn.textContent = !isAnyUnchecked ? 'Select All' : 'Deselect All';
         });
 
         // Add search functionality
@@ -228,15 +239,30 @@ class OpenDMsScreen extends BaseScreen {
         searchInput.addEventListener('input', (e) => {
             const searchTerm = e.target.value.toLowerCase();
             const dmRows = container.querySelectorAll('.dm-row');
+            let visibleCount = 0;
 
             dmRows.forEach(row => {
                 const recipient = row.querySelector('.dm-recipient').textContent.toLowerCase();
                 if (recipient.includes(searchTerm)) {
                     row.style.display = '';
+                    visibleCount++;
                 } else {
                     row.style.display = 'none';
                 }
             });
+
+            this.updateTotalCount(visibleCount);
+        });
+
+        // Add event delegation for user info buttons
+        const dmsList = container.querySelector('#dmsList');
+        dmsList.addEventListener('click', async (e) => {
+            if (e.target.closest('.user-info-btn')) {
+                const dmRow = e.target.closest('.dm-row');
+                if (dmRow) {
+                    await this.handleUserInfo(dmRow);
+                }
+            }
         });
     }
 
@@ -266,6 +292,7 @@ class OpenDMsScreen extends BaseScreen {
 
             if (!dms || dms.length === 0) {
                 dmsList.innerHTML = '<div class="info-message">No open DMs found.</div>';
+                this.updateTotalCount(0);
                 return;
             }
 
@@ -273,14 +300,23 @@ class OpenDMsScreen extends BaseScreen {
             this.dmQueue = [];
 
             // Updated DM row rendering to include both nickname and username
-            dmsList.innerHTML = dms.map(dm => {
+            dmsList.innerHTML = dms.map((dm, index) => {
                 const username = dm.recipients?.[0]?.username || 'Unknown User';
                 const nickname = dm.recipients?.[0]?.global_name || username;
+                const recipientId = dm.recipients?.[0]?.id;
                 return `
                     <div class="dm-row" 
                         data-channel-id="${dm.id}"
-                        data-channel-name="${username}">
-                        <span class="dm-recipient">${nickname} <span class="dm-username">(${username})</span></span>
+                        data-channel-name="${username}"
+                        data-recipient-id="${recipientId}">
+                        <span class="dm-recipient">
+                            <button class="user-info-btn" title="Get User Info">
+                                <svg width="16" height="16" viewBox="0 0 16 16">
+                                    <path fill="currentColor" d="M8 0a8 8 0 100 16A8 8 0 008 0zm0 12a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm1.5-4.563a.5.5 0 01-.5.5h-2a.5.5 0 01-.5-.5v-.375c0-.5.5-.812.938-1.062C7.907 5.75 8 5.5 8 5.25v-1a1.25 1.25 0 112.5 0v.375c0 .5-.5.812-.938 1.062-.469.25-.562.5-.562.75v1z"/>
+                                </svg>
+                            </button>
+                            <span class="dm-index">${index + 1}.</span> ${nickname} <span class="dm-username">(${username})</span>
+                        </span>
                         <span class="dm-count">-</span>
                         <span class="dm-toggle">
                             <input type="checkbox" class="dm-checkbox" 
@@ -291,6 +327,7 @@ class OpenDMsScreen extends BaseScreen {
                 `;
             }).join('');
 
+            this.updateTotalCount(dms.length);
             // Only set up the DM toggle listeners
             this.setupDMToggleListeners(dmsList.closest('.screen-container'));
             Console.success(`Loaded ${dms.length} DM channels`);
@@ -507,6 +544,26 @@ class OpenDMsScreen extends BaseScreen {
                 }
             });
         });
+    }
+
+    updateTotalCount(count) {
+        const totalDMs = document.querySelector('.total-dms');
+        if (totalDMs) {
+            totalDMs.textContent = `Total: ${count} DM${count !== 1 ? 's' : ''}`;
+        }
+    }
+
+    async handleUserInfo(dmRow) {
+        const recipientId = dmRow.dataset.recipientId;
+        const username = dmRow.querySelector('.dm-recipient').textContent.trim();
+        try {
+            const userInfo = await this.api.getUserInfo(recipientId, true);
+            if (userInfo) {
+                Console.printUserInfo(userInfo);
+            }
+        } catch (error) {
+            Console.error(`Failed to get user info for ${username}: ${error.message}`);
+        }
     }
 }
 

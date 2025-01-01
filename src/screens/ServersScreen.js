@@ -90,13 +90,14 @@ class ServersScreen extends BaseScreen {
                                 Get Message Counts
                             </button>
                             <button id="startBtn" class="action-btn primary">
-                                Start
+                                Start Deletion
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Servers List -->
+                <!-- DMs List -->
+                <div class="total-dms">Total: 0 Servers</div>
                 <div class="dms-container">
                     <div class="dms-header">
                         <div class="channel-header">
@@ -138,6 +139,7 @@ class ServersScreen extends BaseScreen {
 
             if (!servers || servers.length === 0) {
                 serversList.innerHTML = '<div class="info-message">No accessible servers found.</div>';
+                this.updateTotalCount(0);
                 return;
             }
 
@@ -145,12 +147,19 @@ class ServersScreen extends BaseScreen {
             this.serverQueue = [];
 
             // Updated server row rendering to match DM format
-            serversList.innerHTML = servers.map(server => {
+            serversList.innerHTML = servers.map((server, index) => {
                 return `
                     <div class="dm-row" 
                         data-server-id="${server.id}"
                         data-server-name="${server.name}">
-                        <span class="dm-recipient">${server.name}</span>
+                        <span class="dm-recipient">
+                            <button class="server-info-btn" title="Get Server Info">
+                                <svg width="16" height="16" viewBox="0 0 16 16">
+                                    <path fill="currentColor" d="M8 0a8 8 0 100 16A8 8 0 008 0zm0 12a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm1.5-4.563a.5.5 0 01-.5.5h-2a.5.5 0 01-.5-.5v-.375c0-.5.5-.812.938-1.062C7.907 5.75 8 5.5 8 5.25v-1a1.25 1.25 0 112.5 0v.375c0 .5-.5.812-.938 1.062-.469.25-.562.5-.562.75v1z"/>
+                                </svg>
+                            </button>
+                            <span class="dm-index">${index + 1}.</span> ${server.name}
+                        </span>
                         <span class="dm-count">-</span>
                         <span class="dm-toggle">
                             <input type="checkbox" class="dm-checkbox" 
@@ -161,6 +170,7 @@ class ServersScreen extends BaseScreen {
                 `;
             }).join('');
 
+            this.updateTotalCount(servers.length);
             // Set up the server toggle listeners
             this.setupServerToggleListeners(serversList.closest('.screen-container'));
             Console.success(`Loaded ${servers.length} servers`);
@@ -231,30 +241,43 @@ class ServersScreen extends BaseScreen {
         // Add select all button listener
         const selectAllBtn = container.querySelector('#selectAllBtn');
         selectAllBtn.addEventListener('click', () => {
+            const allToggles = container.querySelectorAll('.dm-toggle');
             const allCheckboxes = container.querySelectorAll('.dm-checkbox');
             const isAnyUnchecked = Array.from(allCheckboxes).some(checkbox => !checkbox.checked);
             
-            allCheckboxes.forEach(checkbox => {
-                const row = checkbox.closest('.dm-row');
-                const toggle = row.querySelector('.dm-toggle');
-                const serverId = row.dataset.serverId;
-                const serverName = row.dataset.serverName;
-                
-                if (isAnyUnchecked) {
-                    // Select all unchecked
-                    checkbox.checked = true;
-                    toggle.classList.add('active');
-                    this.addToQueue(serverId, serverName);
-                } else {
-                    // Deselect all
-                    checkbox.checked = false;
+            // Clear the queue if we're deselecting all
+            if (!isAnyUnchecked) {
+                this.serverQueue = [];
+                Console.log('Removed all servers from queue');
+                allToggles.forEach(toggle => {
                     toggle.classList.remove('active');
-                    this.removeFromQueue(serverId);
+                    toggle.querySelector('.dm-checkbox').checked = false;
+                });
+            } else {
+                // Build new queue for selecting all
+                const newServers = [];
+                allToggles.forEach(toggle => {
+                    const row = toggle.closest('.dm-row');
+                    const checkbox = row.querySelector('.dm-checkbox');
+                    const serverId = row.dataset.serverId;
+                    const serverName = row.dataset.serverName;
+                    
+                    toggle.classList.add('active');
+                    checkbox.checked = true;
+                    
+                    if (!this.serverQueue.some(server => server.id === serverId)) {
+                        newServers.push({ id: serverId, name: serverName });
+                    }
+                });
+                
+                if (newServers.length > 0) {
+                    this.serverQueue.push(...newServers);
+                    Console.log(`Added ${newServers.length} servers to queue. Queue size: ${this.serverQueue.length}`);
                 }
-            });
+            }
             
-            // Update button text
-            selectAllBtn.textContent = isAnyUnchecked ? 'Disable All' : 'Enable All';
+            // Update button text based on the new state after changes
+            selectAllBtn.textContent = !isAnyUnchecked ? 'Select All' : 'Deselect All';
         });
 
         // Add search functionality
@@ -262,11 +285,19 @@ class ServersScreen extends BaseScreen {
         searchInput.addEventListener('input', (e) => {
             const searchTerm = e.target.value.toLowerCase().trim();
             const serverRows = container.querySelectorAll('.dm-row');
+            let visibleCount = 0;
 
             serverRows.forEach(row => {
                 const serverName = row.querySelector('.dm-recipient').textContent.toLowerCase();
-                row.style.display = serverName.includes(searchTerm) ? '' : 'none';
+                if (serverName.includes(searchTerm)) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
             });
+
+            this.updateTotalCount(visibleCount);
 
             // Update "Enable All" button to only consider visible rows
             const selectAllBtn = container.querySelector('#selectAllBtn');
@@ -287,6 +318,16 @@ class ServersScreen extends BaseScreen {
         onlyMeCheckbox.addEventListener('change', (e) => {
             customUserIdsInput.disabled = e.target.checked;
             userIdsContainer.style.display = e.target.checked ? 'none' : 'block';
+        });
+
+        const serversList = container.querySelector('#serversList');
+        serversList.addEventListener('click', async (e) => {
+            if (e.target.closest('.server-info-btn')) {
+                const serverRow = e.target.closest('.dm-row');
+                if (serverRow) {
+                    await this.handleServerInfo(serverRow);
+                }
+            }
         });
     }
 
@@ -526,8 +567,25 @@ class ServersScreen extends BaseScreen {
         this.updateButtonState(false, true);
     }
 
-    // ... Rest of the methods (getMessageCounts, toggleOperation, startDeletion, etc.) 
-    // can remain the same as OpenDMsScreen, just replacing DM terminology with Server
+    updateTotalCount(count) {
+        const totalServers = document.querySelector('.total-dms');
+        if (totalServers) {
+            totalServers.textContent = `Total: ${count} Server${count !== 1 ? 's' : ''}`;
+        }
+    }
+
+    async handleServerInfo(serverRow) {
+        const serverId = serverRow.dataset.serverId;
+        const serverName = serverRow.dataset.serverName;
+        try {
+            const serverInfo = await this.api.getGuildInfo(serverId);
+            if (serverInfo) {
+                Console.printServerInfo(serverInfo);
+            }
+        } catch (error) {
+            Console.error(`Failed to get server info for ${serverName}: ${error.message}`);
+        }
+    }
 }
 
 module.exports = ServersScreen; 

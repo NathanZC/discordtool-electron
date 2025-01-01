@@ -15,11 +15,24 @@ function createWindow() {
             nodeIntegration: true,
             contextIsolation: false,
             webSecurity: true,
-            additionalArguments: [`--app-path=${app.getAppPath()}`]
+            additionalArguments: [`--app-path=${app.getAppPath()}`],
+            contentSecurityPolicy: `
+                default-src 'self';
+                img-src 'self' https://*.discord.com https://cdn.discord.com;
+                script-src 'self';
+                style-src 'self' 'unsafe-inline';
+            `
         }
     });
-
+    // do this when done
+    // win.setMenu(null);
     win.loadFile('index.html');
+
+    win.webContents.on('dom-ready', () => {
+        win.webContents.executeJavaScript(`
+            window.trashIconPath = '${path.join(__dirname, 'assets', 'images', 'trash.png').replace(/\\/g, '/')}';
+        `);
+    });
 }
 
 app.whenReady().then(() => {

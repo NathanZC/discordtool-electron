@@ -7,12 +7,12 @@ const Navigation = require(path.join(appPath, 'src', 'components', 'Navigation.j
 class AuthScreen {
     constructor() {
         this.store = new Store();
+        this.savedAccounts = this.store.get('saved_accounts') || [];
         console.log('Store location:', this.store.path); // This will show you where the data is stored
         console.log('AuthScreen initializing...');
         try {
             this.init();
             this.setupEventListeners();
-            this.checkSavedToken();
             console.log('AuthScreen initialized successfully');
         } catch (error) {
             console.error('Error initializing AuthScreen:', error);
@@ -24,7 +24,10 @@ class AuthScreen {
         content.innerHTML = `
             <div class="auth-container">
                 <div class="auth-card">
-                    <h1>Discord Tool</h1>
+                    <div class="header-row">
+                        <h1>Discord Tool</h1>
+                        <button id="helpButton" class="help-button">?</button>
+                    </div>
                     <div class="auth-form">
                         <div class="input-group">
                             <input 
@@ -44,8 +47,49 @@ class AuthScreen {
                         <div id="authStatus" class="auth-status"></div>
                     </div>
                 </div>
+                <div class="saved-accounts">
+                    <h2>Saved Accounts</h2>
+                    <div id="accountsList" class="accounts-list"></div>
+                </div>
+            </div>
+            
+            <div id="helpModal" class="help-modal">
+                <div class="help-content">
+                    <button class="close-help">×</button>
+                    <h2>How to Get Your Discord Token</h2>
+                    <ol>
+                        <li>Open Discord in your browser</li>
+                        <li>Press F12 or Ctl+shift+i to open Developer Tools</li>
+                        <li>Go to the "Network" tab (refresh if no requests)</li>
+                        <li>Click on any request to discord.com that uses auth (look for @me under Name)</li>
+                        <li>To the right look under Response Headers and Look for "Authorization" in the request headers</li>
+                        <li>Look for "Authorization" in the request headers</li>
+                    </ol>
+                    <p>⚠️ Never share your token with anyone! It provides full access to your account.</p>
+                </div>
             </div>
         `;
+        this.renderSavedAccounts();
+    }
+
+    renderSavedAccounts() {
+        const accountsList = document.getElementById('accountsList');
+        accountsList.innerHTML = this.savedAccounts.map(account => `
+            <div class="account-row" data-user-id="${account.userId}">
+                <img src="${this.getAvatarUrl(account)}" alt="Profile" class="account-avatar">
+                <span class="account-username">${account.username}</span>
+                <div class="account-actions">
+                    <button class="login-btn" data-user-id="${account.userId}">Login</button>
+                    <button class="delete-btn" data-user-id="${account.userId}">❌</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    getAvatarUrl(account) {
+        return account.avatar 
+            ? `https://cdn.discordapp.com/avatars/${account.userId}/${account.avatar}.png`
+            : 'https://cdn.discordapp.com/embed/avatars/0.png';
     }
 
     async checkSavedToken() {
@@ -65,14 +109,26 @@ class AuthScreen {
         if (response.isValid) {
             const rememberMe = document.getElementById('rememberMe');
             if (rememberMe.checked) {
-                this.store.set('discord_token', {
+                const accountData = {
                     token: token,
                     userId: response.userId,
+                    username: response.userData.username,
+                    avatar: response.userData.avatar,
                     lastUsed: new Date().toISOString()
-                });
-            } else {
-                this.store.delete('discord_token');
+                };
+                
+                this.savedAccounts = this.savedAccounts.filter(acc => acc.userId !== response.userId);
+                this.savedAccounts.push(accountData);
+                this.store.set('saved_accounts', this.savedAccounts);
+                this.renderSavedAccounts();
             }
+            
+            this.store.set('discord_token', {
+                token: token,
+                userId: response.userId,
+                lastUsed: new Date().toISOString()
+            });
+            
             this.showStatus('Connected successfully!', 'success');
             
             setTimeout(() => {
@@ -129,6 +185,44 @@ class AuthScreen {
         authInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 submitButton.click();
+            }
+        });
+
+        // Add account list listeners
+        document.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('login-btn')) {
+                const userId = e.target.dataset.userId;
+                const account = this.savedAccounts.find(acc => acc.userId === userId);
+                if (account) {
+                    await this.handleAuth(account.token);
+                }
+            }
+            
+            if (e.target.classList.contains('delete-btn')) {
+                const userId = e.target.dataset.userId;
+                this.savedAccounts = this.savedAccounts.filter(acc => acc.userId !== userId);
+                this.store.set('saved_accounts', this.savedAccounts);
+                this.renderSavedAccounts();
+            }
+        });
+
+        // Add help modal listeners
+        const helpButton = document.getElementById('helpButton');
+        const helpModal = document.getElementById('helpModal');
+        const closeHelp = document.querySelector('.close-help');
+
+        helpButton.addEventListener('click', () => {
+            helpModal.style.display = 'flex';
+        });
+
+        closeHelp.addEventListener('click', () => {
+            helpModal.style.display = 'none';
+        });
+
+        // Close modal when clicking outside
+        window.addEventListener('click', (e) => {
+            if (e.target === helpModal) {
+                helpModal.style.display = 'none';
             }
         });
     }

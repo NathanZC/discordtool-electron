@@ -18,52 +18,65 @@
     background: #677BC4;
 } 
 
-.brand {
+.user-info {
+    padding: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 15px;
+}
+
+.user-profile {
     display: flex;
     flex-direction: column;
-    padding: 10px;
-    width: 100%;
-}
-
-.brand-header {
-    margin-bottom: 10px;
-}
-
-.brand-title {
-    display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.logo {
-    color: #fff;
-}
-
-.brand-text {
-    color: #fff;
-    font-size: 14px;
-}
-
-.user-info {
-    display: flex;
-    align-items: center;
-    padding: 10px;
-    margin-top: 10px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    width: 100%;
-}
-
 .user-avatar {
-    width: 32px;
-    height: 32px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
-    margin-right: 10px;
+    object-fit: cover;
+    border: 2px solid #7289DA;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s ease;
+}
+
+.user-avatar:hover {
+    transform: scale(1.05);
+    border-color: #677BC4;
 }
 
 .username {
     color: #fff;
     font-size: 14px;
-    white-space: nowrap;
+    font-weight: 500;
+    text-align: center;
+    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.expandable-section {
+    cursor: pointer;
+}
+
+.expandable-section .section-header {
+    display: flex;
+    align-items: center;
+}
+
+.expandable-section .section-header:before {
+    content: '+';  /* Changed to plus/minus symbols */
+    margin-right: 5px;
+    font-size: 0.9em;
+    font-weight: bold;
+}
+
+.expandable-section.collapsed .section-header:before {
+    content: '>';  /* Simple right arrow */
+}
+
+.expandable-section.collapsed .section-content {
+    display: none;
 }

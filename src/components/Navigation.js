@@ -7,9 +7,10 @@ const HelpScreen = require('../screens/HelpScreen');
 const Console = require('./Console');
 
 class Navigation {
-    constructor(token, userId) {
+    constructor(token, userId, userData) {
         this.token = token;
         this.userId = userId;
+        this.userData = userData;
         this.currentScreen = null;
         this.menuItems = [
             { id: 'open-dms', label: 'Open DMs', icon: '💬' },
@@ -18,34 +19,25 @@ class Navigation {
             { id: 'wipe', label: 'Wipe Account', icon: '🗑️' },
             { id: 'help', label: 'How to Use', icon: '❔' },
         ];
-        
-        this.fetchUserInfo();
-    }
-
-    async fetchUserInfo() {
-        try {
-            const response = await fetch('https://discord.com/api/v9/users/@me', {
-                headers: {
-                    'Authorization': this.token
-                }
-            });
-            const userData = await response.json();
+        console.log("userdata:", userData)
+        if (userData) {
             this.updateUserInfo(userData);
-        } catch (error) {
-            console.error('Failed to fetch user info:', error);
         }
     }
 
     updateUserInfo(userData) {
         const userInfoElement = document.querySelector('.user-info');
         if (userInfoElement && userData) {
+            console.log(userData)
             const avatarUrl = userData.avatar 
-                ? `https://cdn.discord.com/avatars/${userData.id}/${userData.avatar}.png`
-                : 'https://cdn.discord.com/embed/avatars/0.png';
+                ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png`
+                : 'https://cdn.discordapp.com/embed/avatars/0.png';
             
             userInfoElement.innerHTML = `
-                <img src="${avatarUrl}" alt="Profile" class="user-avatar">
-                <span class="username">${userData.username}</span>
+                <div class="user-profile">
+                    <img src="${avatarUrl}" alt="Profile" class="user-avatar">
+                    <span class="username">${userData.username}</span>
+                </div>
             `;
         }
     }
@@ -58,15 +50,11 @@ class Navigation {
             <div class="app-layout">
                 <nav class="sidebar">
                     <div class="brand">
-                        <div class="brand-header">
-                            <div class="brand-title">
-                                <span class="logo">DT</span>
-                                <span class="brand-text">Discord Tool</span>
-                            </div>
-                        </div>
-                        <div class="user-info">
-                            <!-- User info will be populated by updateUserInfo -->
-                        </div>
+                        <div class="logo">DT</div>
+                        <div class="brand-text">Discord Tool</div>
+                    </div>
+                    <div class="user-info">
+                        <!-- User info will be populated by updateUserInfo -->
                     </div>
                     <ul class="menu-list">
                         ${this.menuItems.map(item => `
@@ -96,6 +84,9 @@ class Navigation {
         Console.init();
         
         this.setupEventListeners();
+
+        // Update user info after DOM is created
+        this.updateUserInfo(this.userData);
 
         // Load initial screen (View Open DMs)
         const initialMenuItem = document.querySelector('.menu-item[data-screen="open-dms"]');

@@ -31,18 +31,21 @@ class DiscordAPI {
                 const userData = await response.json();
                 return {
                     isValid: true,
-                    userId: userData.id
+                    userId: userData.id,
+                    userData: userData
                 };
             }
             return {
                 isValid: false,
-                userId: null
+                userId: null,
+                userData: null
             };
         } catch (error) {
             console.error('Token verification failed:', error);
             return {
                 isValid: false,
-                userId: null
+                userId: null,
+                userData: null
             };
         }
     }
@@ -455,6 +458,193 @@ class DiscordAPI {
             throw new Error(`Failed to leave server: ${response.status}`);
         } catch (error) {
             console.error('Error leaving server:', error);
+            throw error;
+        }
+    }
+
+    async getUserIdFromChannelId(channelId) {
+        try {
+            const response = await this.makeRequest(`/channels/${channelId}`);
+            
+            if (response.status === 200) {
+                const data = await response.json();
+                return data.recipients[0]?.id || null;
+            } else {
+                console.log('Request failed with status code:', response.status);
+                return null;
+            }
+        } catch (error) {
+            console.error('Error getting user ID:', error);
+            return null;
+        }
+    }
+
+    async openDM(channelId) {
+        try {
+            // First get the recipient ID
+            const recipientId = await this.getUserIdFromChannelId(channelId);
+            if (!recipientId) {
+                console.error('Could not get recipient ID');
+                return null;
+            }
+
+            // Then open the DM with the recipient ID
+            const response = await this.makeRequest(
+                '/users/@me/channels',
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': this.token
+                    },
+                    body: JSON.stringify({
+                        recipients: [recipientId]
+                    })
+                }
+            );
+
+            if (response.status === 200) {
+                console.log('Request successful');
+                return await response.json();
+            } else {
+                console.log('Request failed with status code:', response.status);
+                console.error("Error: ", await response.text());
+                return null;
+            }
+        } catch (error) {
+            console.error('Error opening DM:', error);
+            throw error;
+        }
+    }
+
+    async getUserInfo(channelId, isRecipientId = false) {
+        try {
+            // Only get the recipient ID if we don't already have it
+            const recipientId = isRecipientId ? channelId : await this.getUserIdFromChannelId(channelId);
+            if (!recipientId) {
+                throw new Error('Could not get recipient ID');
+            }
+
+            try {
+                // First try to get the full profile
+                const profileResponse = await this.makeRequest(`/users/${recipientId}/profile`);
+                
+                if (profileResponse.status === 200) {
+                    const userData = await profileResponse.json();
+                    return {
+                        username: userData.user.username,
+                        discriminator: userData.user.discriminator || '0',
+                        id: userData.user.id,
+                        avatar: userData.user.avatar,
+                        banner: userData.user.banner,
+                        bio: userData.user_profile?.bio,
+                        pronouns: userData.user_profile?.pronouns,
+                        accentColor: userData.user.accent_color,
+                        flags: userData.user.flags,
+                        globalName: userData.user.global_name,
+                        avatarDecoration: userData.user.avatar_decoration,
+                        connectedAccounts: userData.connected_accounts || [],
+                        premiumSince: userData.premium_since,
+                        premiumType: userData.premium_type,
+                        mutualGuilds: userData.mutual_guilds || [],
+                        mutualFriends: userData.mutual_friends || []
+                    };
+                }
+            } catch (profileError) {
+                console.warn('Failed to fetch profile, falling back to basic user info:', profileError);
+            }
+
+            // If profile fetch fails, fall back to basic user endpoint
+            const basicResponse = await this.makeRequest(`/users/${recipientId}`);
+            
+            if (basicResponse.status === 200) {
+                const userData = await basicResponse.json();
+                return {
+                    username: userData.username,
+                    discriminator: userData.discriminator || '0',
+                    id: userData.id,
+                    avatar: userData.avatar,
+                    banner: userData.banner,
+                    accentColor: userData.accent_color,
+                    flags: userData.flags,
+                    globalName: userData.global_name,
+                    avatarDecoration: userData.avatar_decoration
+                };
+            }
+
+            throw new Error(`Failed to fetch user info: ${basicResponse.status}`);
+        } catch (error) {
+            console.error('Error getting user info:', error);
+            throw error;
+        }
+    }
+
+    async getGuildInfo(guildId) {
+        try {
+            // First get basic guild info
+            const response = await this.makeRequest(`/guilds/${guildId}`);
+            
+            if (response.status === 200) {
+                const guildData = await response.json();
+                
+                // Get preview data which includes member count
+                const previewResponse = await this.makeRequest(`/guilds/${guildId}/preview`);
+                const previewData = previewResponse.ok ? await previewResponse.json() : {};
+                
+                // Get guild incidents/safety data
+                const incidentsResponse = await this.makeRequest(`/guilds/${guildId}/incidents`);
+                const incidentsData = incidentsResponse.ok ? await incidentsResponse.json() : {};
+                
+                // Convert BigInt to Number before creating Date
+                const timestamp = Number((BigInt(guildData.id) >> 22n) + 1420070400000n);
+                
+                return {
+                    // Basic Info
+                    id: guildData.id,
+                    name: guildData.name,
+                    icon: guildData.icon,
+                    description: guildData.description,
+                    
+                    // Owner & Region Info
+                    owner_id: guildData.owner_id,
+                    region: guildData.region,
+                    
+                    // Member Counts
+                    approximate_member_count: previewData.approximate_member_count || guildData.approximate_member_count,
+                    approximate_presence_count: previewData.approximate_presence_count || guildData.approximate_presence_count,
+                    max_members: guildData.max_members,
+                    max_presences: guildData.max_presences,
+                    
+                    // Safety & Incidents
+                    safety_alerts_channel_id: guildData.safety_alerts_channel_id,
+                    explicit_content_filter: guildData.explicit_content_filter,
+                    mfa_level: guildData.mfa_level,
+                    incidents: incidentsData,
+                    
+                    // Other Details
+                    features: guildData.features,
+                    created_at: new Date(timestamp),
+                    roles: guildData.roles,
+                    emojis: guildData.emojis,
+                    stickers: guildData.stickers,
+                    premium_tier: guildData.premium_tier,
+                    premium_subscription_count: guildData.premium_subscription_count,
+                    preferred_locale: guildData.preferred_locale,
+                    nsfw_level: guildData.nsfw_level,
+                    verification_level: guildData.verification_level,
+                    
+                    // Vanity URL if available
+                    vanity_url_code: guildData.vanity_url_code,
+                    
+                    // Discovery Info
+                    discovery_splash: guildData.discovery_splash,
+                    description_flags: guildData.description_flags
+                };
+            } else {
+                throw new Error(`Failed to fetch guild info: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Error getting guild info:', error);
             throw error;
         }
     }
