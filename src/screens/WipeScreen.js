@@ -150,7 +150,7 @@ class WipeScreen extends BaseScreen {
                         </div>
                     </div>
                     <div class="dms-container">
-                        <div class="dms-header">
+                        <div class="dms-header compact-header">
                             <div class="channel-header">
                                 <span>Channel</span>
                                 <button class="refresh-btn" id="refreshDMsBtn" title="Refresh DM List">
@@ -159,11 +159,11 @@ class WipeScreen extends BaseScreen {
                                     </svg>
                                 </button>
                             </div>
-                            <div class="search-container">
+                            <div class="search-container compact-search">
                                 <input type="text" id="channelSearch" placeholder="Search channels..." class="dm-search">
                             </div>
-                            <span class="message-count-header">Message Count</span>
-                            <span class="actions-header">Actions</span>
+                            <span class="message-count-header compact-header">Message Count</span>
+                            <span class="actions-header compact-header">Actions</span>
                         </div>
                         <div class="dms-list" id="channelsList">
                             <!-- Channels will be loaded here -->

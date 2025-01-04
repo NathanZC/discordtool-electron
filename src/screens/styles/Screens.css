@@ -501,17 +501,6 @@
     overflow: hidden;
 }
 
-.dms-header {
-    display: grid;
-    grid-template-columns: 1fr 150px auto;
-    padding: 1rem;
-    background: #202225;
-    font-weight: bold;
-    color: #fff;
-    gap: 1rem;
-    align-items: center;
-}
-
 .dms-list {
     max-height: 100%;
     overflow-y: auto;
@@ -909,6 +898,7 @@
     background: #2f3136;
     border-bottom: 1px solid #202225;
     font-weight: 500;
+    gap: 1rem;
 }
 
 .dm-row {
@@ -1463,16 +1453,6 @@
 .dm-search:focus {
     outline: none;
     border-color: #7289da;
-}
-
-/* Update the existing dms-header class */
-.dms-header {
-    display: flex;
-    align-items: center;
-    padding: 10px 15px;
-    background: #2f3136;
-    border-bottom: 1px solid #202225;
-    font-weight: 500;
 }
 
 .channel-header {
@@ -2478,4 +2458,28 @@ code {
     text-align: center;
     padding: 0 1rem;
     white-space: nowrap;
+}
+
+/* Add these new classes */
+.dms-header.compact-header {
+    display: flex;  /* Switch to flexbox for better control */
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+}
+
+.search-container.compact-search {
+    flex: 1;  /* Fill remaining space */
+    margin: 0 8px;
+}
+
+.message-count-header.compact-header {
+    width: 150px;  /* Fixed width */
+    text-align: center;
+    margin-left: auto;  /* Push to the right */
+}
+
+.actions-header.compact-header {
+    width: 250px;  /* Match action buttons width */
+    text-align: center;
 }
