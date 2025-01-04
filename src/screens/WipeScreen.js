@@ -295,7 +295,7 @@ class WipeScreen extends BaseScreen {
                             ${this.getLockIcon(channelState.locked)}
                         </span>
                     </span>
-                    <span class="message-count">-</span>
+                    <span class="message-count ${isDM ? 'with-dm-button' : ''}"">-</span>
                     <div class="dm-actions">
                         ${isDM ? `
                             <button class="wipe-screen-dm-btn ${this.openDMs.has(channelId) ? 'opened' : ''}" 

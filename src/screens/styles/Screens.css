@@ -2483,3 +2483,8 @@ code {
     width: 250px;  /* Match action buttons width */
     text-align: center;
 }
+
+/* Add this with the other message count styles */
+.message-count.with-dm-button {
+    padding-left: 35px;
+}
