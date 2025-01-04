@@ -20,8 +20,10 @@ class WipeScreen extends BaseScreen {
         // Initialize channel states for current user
         this.channelStates = this.loadChannelStates();
         
-        if (WipeScreen.loadedData) {
-            this.processUserData(WipeScreen.loadedData);
+        // Load saved file path and data for current user
+        this.loadedFilePath = this.loadFilePath();
+        if (this.loadedFilePath) {
+            this.loadSavedFile(this.loadedFilePath);
         }
 
         // Load open DMs when screen initializes and re-render the list
@@ -183,7 +185,9 @@ class WipeScreen extends BaseScreen {
             this.processUserData(WipeScreen.loadedData);
             const fileNameSpan = container.querySelector('#fileName');
             if (fileNameSpan) {
-                fileNameSpan.textContent = 'Discord Data (Loaded)';
+                fileNameSpan.textContent = this.loadedFilePath ? 
+                    this.loadedFilePath.split(/[\\/]/).pop() : 
+                    'Discord Data (Loaded)';
             }
         }
     }
@@ -193,8 +197,9 @@ class WipeScreen extends BaseScreen {
         reader.onload = (e) => {
             try {
                 const data = JSON.parse(e.target.result);
-                // Store the data in the static property
                 WipeScreen.loadedData = data;
+                // Save the full file path
+                this.saveFilePath(file.path);
                 this.processUserData(data);
             } catch (error) {
                 Console.error('Error parsing JSON file: ' + error.message);
@@ -865,6 +870,39 @@ class WipeScreen extends BaseScreen {
             Console.log(`Loaded ${this.openDMs.size} open DM channels`);
         } catch (error) {
             Console.error('Error loading open DMs: ' + error.message);
+        }
+    }
+
+    // Update these methods to handle file paths
+    loadFilePath() {
+        const userKey = `filePath.${this.api.userId}`;
+        return this.store.get(userKey, null);
+    }
+
+    saveFilePath(filePath) {
+        const userKey = `filePath.${this.api.userId}`;
+        this.store.set(userKey, filePath);
+        this.loadedFilePath = filePath;
+    }
+
+    // Add method to load saved file
+    loadSavedFile(filePath) {
+        try {
+            const fs = require('fs');
+            if (fs.existsSync(filePath)) {
+                const fileData = fs.readFileSync(filePath, 'utf8');
+                const data = JSON.parse(fileData);
+                WipeScreen.loadedData = data;
+                this.processUserData(data);
+                Console.log(`Loaded saved file: ${filePath}`);
+            } else {
+                Console.warn(`Previously saved file not found: ${filePath}`);
+                // Clear the saved path since file doesn't exist
+                this.saveFilePath(null);
+            }
+        } catch (error) {
+            Console.error('Error loading saved file:', error);
+            this.saveFilePath(null);
         }
     }
 }

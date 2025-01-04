@@ -465,14 +465,18 @@
     height: 100%;
     padding: 0.5rem;
     overflow-y: auto;
+    overflow-x: hidden;
     font-family: monospace;
     font-size: 0.9rem;
+    white-space: normal;
+    word-break: break-word;
 }
 
 .console-entry {
     padding: 0.25rem;
     border-radius: 2px;
     margin-bottom: 0.25rem;
+    white-space: pre-line;
 }
 
 .console-entry.info {

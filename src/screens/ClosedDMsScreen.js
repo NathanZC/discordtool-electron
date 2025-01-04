@@ -1,6 +1,7 @@
 const BaseScreen = require('./BaseScreen');
 const DiscordAPI = require('../utils/discord');
 const Console = require('../components/Console');
+const Store = require('electron-store');
 
 class ClosedDMsScreen extends BaseScreen {
     // Add static property to store loaded data
@@ -11,10 +12,48 @@ class ClosedDMsScreen extends BaseScreen {
         this.api = new DiscordAPI(token, userId);
         this.closedDMs = new Map(); // Store closed DM data
         this.openDMs = new Set(); // Track which DMs are already open
+        this.store = new Store(); // Add store instance
         
+        // Load saved file path and data for current user
+        this.loadedFilePath = this.loadFilePath();
+        if (this.loadedFilePath) {
+            this.loadSavedFile(this.loadedFilePath);
+        }
+
         // If we have previously loaded data, process it
         if (ClosedDMsScreen.loadedData) {
             this.processUserData(ClosedDMsScreen.loadedData);
+        }
+    }
+
+    loadFilePath() {
+        const userKey = `filePath.${this.api.userId}`;
+        return this.store.get(userKey, null);
+    }
+
+    saveFilePath(filePath) {
+        const userKey = `filePath.${this.api.userId}`;
+        this.store.set(userKey, filePath);
+        this.loadedFilePath = filePath;
+    }
+
+    loadSavedFile(filePath) {
+        try {
+            const fs = require('fs');
+            if (fs.existsSync(filePath)) {
+                const fileData = fs.readFileSync(filePath, 'utf8');
+                const data = JSON.parse(fileData);
+                ClosedDMsScreen.loadedData = data;
+                this.processUserData(data);
+                Console.log(`Loaded saved file: ${filePath}`);
+            } else {
+                Console.warn(`Previously saved file not found: ${filePath}`);
+                // Clear the saved path since file doesn't exist
+                this.saveFilePath(null);
+            }
+        } catch (error) {
+            Console.error('Error loading saved file:', error);
+            this.saveFilePath(null);
         }
     }
 
@@ -118,7 +157,9 @@ class ClosedDMsScreen extends BaseScreen {
             this.processUserData(ClosedDMsScreen.loadedData);
             const fileNameSpan = container.querySelector('#fileName');
             if (fileNameSpan) {
-                fileNameSpan.textContent = 'Discord Data (Loaded)';
+                fileNameSpan.textContent = this.loadedFilePath ? 
+                    this.loadedFilePath.split(/[\\/]/).pop() : 
+                    'Discord Data (Loaded)';
             }
         }
 
@@ -147,6 +188,8 @@ class ClosedDMsScreen extends BaseScreen {
                 const data = JSON.parse(e.target.result);
                 // Store the data in the static property
                 ClosedDMsScreen.loadedData = data;
+                // Save the full file path
+                this.saveFilePath(file.path);
                 this.processUserData(data);
             } catch (error) {
                 Console.error('Error parsing JSON file: ' + error.message);
@@ -467,8 +510,9 @@ class ClosedDMsScreen extends BaseScreen {
             
             const result = await this.api.openDM(channelId);
             
-            if (result) {
-                Console.success(`Successfully opened DM with ${username}`);
+            if (result && result.recipients && result.recipients[0]) {
+                const actualUsername = result.recipients[0].username;
+                Console.success(`Successfully opened DM with ${actualUsername}`);
                 this.openDMs.add(channelId);
                 button.textContent = 'Already Open';
                 button.classList.add('disabled');
