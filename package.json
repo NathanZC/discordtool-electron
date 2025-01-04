@@ -1,7 +1,9 @@
 {
   "name": "discord-tool",
   "version": "1.0.0",
+  "description": "A helper application for managing Discord accounts",
   "private": true,
+  "author": "Nate",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -16,13 +18,11 @@
     "appId": "com.example.discordtool",
     "files": [
       "**/*",
-      "!node_modules/.bin",
-      "!node_modules/electron/**/*",
-      "!node_modules/electron-builder/**/*",
-      "!**/*.map"
+      "src/**/*"
     ],
     "directories": {
-      "output": "dist"
+      "output": "release",
+      "buildResources": "build"
     },
     "extraResources": [
       {

@@ -1,8 +1,7 @@
 const path = require('path');
 const Store = require('electron-store');
-const appPath = process.cwd();
-const DiscordAPI  = require(path.join(appPath, 'src', 'utils', 'discord.js'));
-const Navigation = require(path.join(appPath, 'src', 'components', 'Navigation.js'));
+const DiscordAPI = require('../utils/discord.js');
+const Navigation = require('../components/Navigation.js');
 
 class AuthScreen {
     constructor() {

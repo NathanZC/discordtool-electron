@@ -3,12 +3,6 @@ class Console {
         const consoleContent = document.getElementById('console-content');
         if (!consoleContent) return;
 
-        // Add link to the CSS file instead of inline styles
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = '../styles/console.css';
-        document.head.appendChild(link);
-
         consoleContent.innerHTML = `
             <h2>Console</h2>
             <div class="console-section">
