@@ -7,7 +7,7 @@ class HelpScreen extends BaseScreen {
 
     render(container) {
         container.innerHTML = `
-            <div class="screen-container">
+            <div class="help-screen-container">
                 <h1>How to Use</h1>
                 <div class="help-content">
                     <section class="help-section important-notice">
@@ -15,7 +15,7 @@ class HelpScreen extends BaseScreen {
                         <p>Some features require your Discord data file:</p>
                         <ol class="steps-list">
                             <li>Open Discord Settings > Privacy & Safety</li>
-                            <li>Click "Request Data"</li>
+                            <li>Click "Request Data" (make sure to check messages)</li>
                             <li>Wait for Discord's email (usually within 24-48 hours)</li>
                             <li>Download and extract the ZIP file</li>
                             <li>Locate the <code>messages/index.json</code> file</li>

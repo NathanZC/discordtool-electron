@@ -647,7 +647,6 @@ class WipeScreen extends BaseScreen {
             }
             
             if (result.success) {
-                Console.success(`Successfully wiped messages in ${channelName}`);
                 this.updateChannelState(channelId, WipeScreen.CHANNEL_STATES.COMPLETE, true);
             } else if (result.stopped) {
                 Console.warn(`Operation stopped for ${channelName}`);

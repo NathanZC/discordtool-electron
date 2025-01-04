@@ -5,7 +5,7 @@ class Console {
 
         consoleContent.innerHTML = `
             <h2>Console</h2>
-            <div class="console-section">
+            <div class="console-section"
                 <div class="console-output" id="consoleOutput">
                     <!-- Console messages will appear here -->
                 </div>
@@ -34,6 +34,8 @@ class Console {
         const logEntry = document.createElement('div');
         logEntry.className = `console-entry ${type}`;
         logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        logEntry.style.whiteSpace = 'pre-wrap';
+        logEntry.style.wordBreak = 'break-word';
         consoleOutput.appendChild(logEntry);
         consoleOutput.scrollTop = consoleOutput.scrollHeight;
     }
@@ -67,6 +69,8 @@ class Console {
 
         const infoBlock = document.createElement('div');
         infoBlock.className = 'console-entry info user-info';
+        infoBlock.style.whiteSpace = 'pre-wrap';
+        infoBlock.style.wordBreak = 'break-word';
         
         const formatLine = (label, value) => `${label}: ${value}<br>`;
         const formatLink = (url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">.../${url.split('/').pop()}</a>`;
@@ -179,6 +183,8 @@ class Console {
 
         const infoBlock = document.createElement('div');
         infoBlock.className = 'console-entry info user-info';
+        infoBlock.style.whiteSpace = 'pre-wrap';
+        infoBlock.style.wordBreak = 'break-word';
         
         const formatLine = (label, value) => value ? `${label}: ${value}<br>` : '';
         const formatLink = (url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">.../${url.split('/').pop()}</a>`;

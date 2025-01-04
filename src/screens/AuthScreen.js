@@ -149,10 +149,6 @@ class AuthScreen {
         const nav = new Navigation(token, userId, userData);
         nav.render();
         
-        const mainContent = document.createElement('div');
-        mainContent.id = 'main-content';
-        content.appendChild(mainContent);
-        
         nav.navigateTo('home');
     }
 
