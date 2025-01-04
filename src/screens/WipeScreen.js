@@ -583,7 +583,7 @@ class WipeScreen extends BaseScreen {
         }
     }
 
-    async handleWipeMessages(channelRow, button) {
+    async handleWipeMessages(channelRow, button, isBatchOperation = false) {
         const channelId = channelRow.dataset.channelId;
         const channelName = channelRow.dataset.originalName;
         const channelState = this.getChannelState(channelId);
@@ -594,9 +594,16 @@ class WipeScreen extends BaseScreen {
             return;
         }
 
+        // For individual channel wipes, initialize isRunning
+        if (!isBatchOperation) {
+            this.isRunning = true;
+        }
+
         // Check if already wiping this channel
         if (button.textContent === 'Stop') {
-            this.isRunning = false;
+            if (!isBatchOperation) {
+                this.isRunning = false;
+            }
             button.disabled = true;
             button.textContent = 'Stopping...';
             return;
@@ -606,8 +613,6 @@ class WipeScreen extends BaseScreen {
             button.textContent = 'Stop';
             button.classList.add('danger');
             
-            // Set isRunning to true for individual channel wipes
-            this.isRunning = true;
             let isChannelWiping = true;
             const isRunningRef = () => isChannelWiping && this.isRunning;
             
@@ -650,8 +655,10 @@ class WipeScreen extends BaseScreen {
             Console.error(`Error in ${channelName}: ${error.message}`);
             this.updateChannelState(channelId, WipeScreen.CHANNEL_STATES.UNABLE);
         } finally {
-            // Reset isRunning after individual channel wipe
-            this.isRunning = false;
+            // Reset isRunning only for individual channel wipes
+            if (!isBatchOperation) {
+                this.isRunning = false;
+            }
             button.disabled = false;
             button.classList.remove('danger');
             button.textContent = this.getWipeButtonText(this.getChannelState(channelId));
@@ -744,7 +751,7 @@ class WipeScreen extends BaseScreen {
                 continue;
             }
 
-            await this.handleWipeMessages(row, button);
+            await this.handleWipeMessages(row, button, true);
             
             processedChannels++;
             this.updateProgress(processedChannels, totalChannels);
