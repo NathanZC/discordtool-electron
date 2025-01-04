@@ -15,6 +15,7 @@ class WipeScreen extends BaseScreen {
         this.api = new DiscordAPI(token, userId);
         this.channels = new Map();
         this.store = new Store();
+        this.openDMs = new Set();
         
         // Initialize channel states for current user
         this.channelStates = this.loadChannelStates();
@@ -22,6 +23,11 @@ class WipeScreen extends BaseScreen {
         if (WipeScreen.loadedData) {
             this.processUserData(WipeScreen.loadedData);
         }
+
+        // Load open DMs when screen initializes and re-render the list
+        this.loadOpenDMs().then(() => {
+            this.renderChannelsList();
+        });
     }
 
     // Load channel states from storage
@@ -147,6 +153,11 @@ class WipeScreen extends BaseScreen {
                         <div class="dms-header">
                             <div class="channel-header">
                                 <span>Channel</span>
+                                <button class="refresh-btn" id="refreshDMsBtn" title="Refresh DM List">
+                                    <svg width="16" height="16" viewBox="0 0 16 16">
+                                        <path fill="currentColor" d="M13.6 2.3C12.2.9 10.2 0 8 0 3.6 0 0 3.6 0 8s3.6 8 8 8c3.7 0 6.8-2.5 7.7-6h-2.1c-.8 2.3-3 4-5.6 4-3.3 0-6-2.7-6-6s2.7-6 6-6c1.7 0 3.1.7 4.2 1.8L9 7h7V0l-2.4 2.3z"/>
+                                    </svg>
+                                </button>
                             </div>
                             <div class="search-container">
                                 <input type="text" id="channelSearch" placeholder="Search channels..." class="dm-search">
@@ -286,6 +297,15 @@ class WipeScreen extends BaseScreen {
                     </span>
                     <span class="message-count">-</span>
                     <div class="dm-actions">
+                        ${isDM ? `
+                            <button class="wipe-screen-dm-btn ${this.openDMs.has(channelId) ? 'opened' : ''}" 
+                                title="${this.openDMs.has(channelId) ? 'DM Already Open' : 'Open DM'}"
+                                ${this.openDMs.has(channelId) ? 'disabled' : ''}>
+                                <svg width="16" height="16" viewBox="0 0 16 16">
+                                    <path fill="currentColor" d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-2.5a2 2 0 0 0-1.6.8L8 14.333 6.1 11.8a2 2 0 0 0-1.6-.8H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2.5a1 1 0 0 1 .8.4l1.9 2.533a1 1 0 0 0 1.6 0l1.9-2.533a1 1 0 0 1 .8-.4H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
+                                </svg>
+                            </button>
+                        ` : ''}
                         <button class="wipe-messages-btn action-btn danger" ${channelState.locked ? 'disabled' : ''}>
                             ${this.getWipeButtonText(channelState)}
                         </button>
@@ -400,6 +420,33 @@ class WipeScreen extends BaseScreen {
                 await this.handleInfoButtonClick(channelRow);
             } else if (e.target.closest('.wipe-messages-btn')) {
                 await this.handleWipeMessages(channelRow, e.target.closest('.wipe-messages-btn'));
+            } else if (e.target.closest('.wipe-screen-dm-btn:not(.opened)')) {
+                const button = e.target.closest('.wipe-screen-dm-btn');
+                const channelId = channelRow.dataset.channelId;
+                
+                try {
+                    button.disabled = true;
+                    const originalContent = button.innerHTML;
+                    button.textContent = 'Opening...';
+                    
+                    const dmResult = await this.api.openDM(channelId);
+                    if (dmResult && dmResult.recipients && dmResult.recipients[0]) {
+                        const username = dmResult.recipients[0].username;
+                        this.openDMs.add(channelId);
+                        button.classList.add('opened');
+                        button.title = 'DM Already Open';
+                        button.innerHTML = `
+                            <svg width="16" height="16" viewBox="0 0 16 16">
+                                <path fill="currentColor" d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-2.5a2 2 0 0 0-1.6.8L8 14.333 6.1 11.8a2 2 0 0 0-1.6-.8H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2.5a1 1 0 0 1 .8.4l1.9 2.533a1 1 0 0 0 1.6 0l1.9-2.533a1 1 0 0 1 .8-.4H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
+                            </svg>
+                        `;
+                        Console.success(`Opened DM with user ${username}`);
+                    }
+                } catch (error) {
+                    Console.error('Failed to open DM:', error);
+                    button.disabled = false;
+                    button.innerHTML = originalContent;
+                }
             }
         });
 
@@ -458,6 +505,15 @@ class WipeScreen extends BaseScreen {
             if (e.target === resetConfirmModal) {
                 resetConfirmModal.style.display = 'none';
             }
+        });
+
+        // Refresh button handler
+        const refreshBtn = container.querySelector('#refreshDMsBtn');
+        refreshBtn.addEventListener('click', async () => {
+            refreshBtn.classList.add('spinning');
+            await this.loadOpenDMs();
+            this.renderChannelsList();
+            refreshBtn.classList.remove('spinning');
         });
     }
 
@@ -789,6 +845,19 @@ class WipeScreen extends BaseScreen {
                 return 'Retry';
             default:
                 return 'Wipe Messages';
+        }
+    }
+
+    // Add this method
+    async loadOpenDMs() {
+        try {
+            const dms = await this.api.getAllOpenDMs();
+            // Clear and repopulate the Set with channel IDs
+            this.openDMs.clear();
+            dms.forEach(dm => this.openDMs.add(dm.id));
+            Console.log(`Loaded ${this.openDMs.size} open DM channels`);
+        } catch (error) {
+            Console.error('Error loading open DMs: ' + error.message);
         }
     }
 }

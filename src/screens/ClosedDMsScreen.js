@@ -86,7 +86,7 @@ class ClosedDMsScreen extends BaseScreen {
                     </div>
                     <div class="dms-container">
                         <div class="dms-header">
-                            <div class="channel-header">
+                            <div class="channel-header closed-dm-channel">
                                 <span>Channel</span>
                                 <button class="refresh-btn" id="refreshDMsBtn" title="Refresh DM List">
                                     <svg width="16" height="16" viewBox="0 0 16 16">
@@ -94,11 +94,11 @@ class ClosedDMsScreen extends BaseScreen {
                                     </svg>
                                 </button>
                             </div>
-                            <div class="search-container">
+                            <div class="search-container closed-dm-search">
                                 <input type="text" id="dmSearch" placeholder="Search DMs..." class="dm-search">
                             </div>
-                            <span>Message Count</span>
-                            <span>Open Dm</span>
+                            <span class="closed-dm-count">Message Count</span>
+                            <span class="closed-dm-action">Open Dm</span>
                         </div>
                         <div class="dms-list" id="dmsList">
                             <!-- DMs will be loaded here -->

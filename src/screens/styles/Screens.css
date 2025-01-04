@@ -9,6 +9,18 @@
     justify-content: center;
 }
 
+.closed-dm-action {
+    text-align: center;
+    padding: 0 1rem;
+    white-space: nowrap;
+    margin-right: 20px;
+}
+
+.dm-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
 .auth-card {
     background-color: #2C2F33;
     padding: 2rem;
@@ -497,7 +509,7 @@
     font-weight: bold;
     color: #fff;
     gap: 1rem;
-    text-align: center;
+    align-items: center;
 }
 
 .dms-list {
@@ -1556,6 +1568,8 @@
 }
 
 .open-dm-btn {
+    width: 120px; /* Set fixed width instead of min-width */
+    height: 32px;
     padding: 6px 12px;
     border: none;
     border-radius: 4px;
@@ -1564,6 +1578,9 @@
     color: white;
     font-size: 0.9rem;
     transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .open-dm-btn:hover {
@@ -1574,6 +1591,7 @@
     background: #4f545c;
     cursor: not-allowed;
     opacity: 0.7;
+    width: 120px; /* Ensure disabled state has same width */
 }
 
 .filter-container {
@@ -2386,4 +2404,78 @@ code {
     font-style: italic;
     color: #b9bbbe;
     margin-top: 12px;
+}
+
+/* Specific styles for WipeScreen open DM buttons */
+.wipe-screen-dm-btn {
+    padding: 6px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    background: #7289da;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.wipe-screen-dm-btn:hover {
+    background: #677bc4;
+}
+
+.wipe-screen-dm-btn.opened {
+    background: #4f545c;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.wipe-screen-dm-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Add or update these styles */
+.wipe-messages-btn,
+.lock-btn {
+    min-width: 120px; /* Set a consistent minimum width */
+    height: 32px; /* Set a consistent height */
+    padding: 0 12px; /* Add consistent padding */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Update the lock button styles to match */
+.lock-btn {
+    min-width: 40px; /* Smaller width for the lock button */
+    padding: 0 8px;
+}
+
+/* Ensure the action buttons container maintains alignment */
+.dm-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.closed-dm-channel {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.closed-dm-search {
+    flex: 1;
+}
+
+.closed-dm-count {
+    text-align: center;
+    padding: 0 1rem;
+    white-space: nowrap;
+}
+
+.closed-dm-action {
+    text-align: center;
+    padding: 0 1rem;
+    white-space: nowrap;
 }
