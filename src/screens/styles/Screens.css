@@ -516,6 +516,7 @@
     align-items: center;
     gap: 1rem;
     text-align: left;
+    transition: background-color 0.2s ease;
 }
 
 .dm-row:hover {
@@ -1639,16 +1640,29 @@
     gap: 10px;
 }
 
+/* Update total-dms to be a container */
 .total-dms {
-    color: var(--text-muted);
-    font-size: 0.9em;
-    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--text-normal);
+    font-size: 20px;
+    font-weight: 500;
+    padding: 4px;
+    margin-bottom: 8px;
 }
 
+/* Move filter buttons out of search container */
 .filter-buttons {
     display: flex;
     gap: 8px;
-    margin-top: 8px;
+    align-items: center;
+}
+
+/* Update search container to remove filter buttons */
+.search-container {
+    flex: 1;
+    margin: 0 15px;
 }
 
 .filter-btn {
@@ -2009,4 +2023,264 @@
 .server-info-btn:hover {
     color: var(--text-normal);
     background: var(--background-modifier-hover);
+}
+
+.channel-type {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    margin-right: 8px;
+    text-transform: uppercase;
+}
+
+.channel-type.dm {
+    background-color: #5865F2;
+    color: white;
+}
+
+.channel-type.server {
+    background-color: #3BA55C;
+    color: white;
+}
+
+/* Channel States */
+.dm-row {
+    transition: background-color 0.2s ease;
+    background-color: #36393f; /* Default/initial state */
+}
+
+.dm-row:hover {
+    filter: brightness(1.1);
+}
+
+/* Complete state */
+.dm-row.state-complete {
+    background-color: rgba(67, 181, 129, 0.15); /* Green with low opacity */
+}
+
+/* Unable state */
+.dm-row.state-unable {
+    background-color: rgba(240, 71, 71, 0.15); /* Red with low opacity */
+}
+
+/* Locked state - slightly darker than default */
+.dm-row.locked {
+    background-color: #2f3136 !important;
+}
+
+/* Remove the emoji icons */
+.channel-state {
+    display: none;
+}
+
+.lock-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    margin-left: 8px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.lock-btn:hover {
+    opacity: 1;
+}
+
+.lock-btn.locked {
+    color: #f04747;
+}
+
+.dm-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.wipe-messages-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Add hover tooltips for states */
+.channel-state {
+    position: relative;
+}
+
+.channel-state:hover::after {
+    content: attr(title);
+    position: absolute;
+    background: #18191c;
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    z-index: 1000;
+}
+
+/* Update the locked state styling */
+.dm-row.state-complete {
+    background-color: rgba(67, 181, 129, 0.15);
+}
+
+.dm-row.state-unable {
+    background-color: rgba(240, 71, 71, 0.15);
+}
+
+/* New styles for locked channels */
+.dm-row .channel-name,
+.dm-row .message-count {
+    transition: color 0.2s ease;
+}
+
+/* When a channel is locked, darken the entire row and its content */
+.dm-row[data-channel-id] .wipe-messages-btn[disabled] {
+    background-color: #2f3136;
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.dm-row[data-channel-id] .channel-name:has(+ .channel-state:has(.locked)),
+.dm-row[data-channel-id]:has(.wipe-messages-btn[disabled]) {
+    background-color: #2f3136;
+    opacity: 0.7;
+}
+
+.dm-row[data-channel-id]:has(.wipe-messages-btn[disabled]) .channel-name,
+.dm-row[data-channel-id]:has(.wipe-messages-btn[disabled]) .message-count,
+.dm-row[data-channel-id]:has(.wipe-messages-btn[disabled]) .dm-index,
+.dm-row[data-channel-id]:has(.wipe-messages-btn[disabled]) .channel-type {
+    opacity: 0.7;
+}
+
+/* Update filter button styles */
+.filter-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.filter-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    background: #4f545c;
+    color: #dcddde;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 60px;
+    text-align: center;
+}
+
+.filter-btn:hover {
+    background: #686d73;
+    color: white;
+}
+
+.filter-btn.active {
+    background: #7289da;
+    color: white;
+}
+
+.filter-btn.active:hover {
+    background: #677bc4;
+}
+
+/* Add these new styles */
+
+.title-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.reset-states-btn {
+    background: #4f545c;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    height: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px;
+}
+
+.reset-states-btn:hover {
+    background: #f04747;
+}
+
+/* Modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: #36393f;
+    padding: 1.5rem;
+    border-radius: 8px;
+    max-width: 400px;
+    width: 90%;
+}
+
+.modal-content h2 {
+    color: #fff;
+    margin-bottom: 1rem;
+}
+
+.modal-content p {
+    color: #dcddde;
+    margin-bottom: 1.5rem;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+.modal-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s ease;
+}
+
+.modal-btn.confirm {
+    background: #f04747;
+    color: white;
+}
+
+.modal-btn.confirm:hover {
+    background: #d84040;
+}
+
+.modal-btn.cancel {
+    background: #4f545c;
+    color: white;
+}
+
+.modal-btn.cancel:hover {
+    background: #686d73;
 }

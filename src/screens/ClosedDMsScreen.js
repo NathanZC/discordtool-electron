@@ -76,7 +76,14 @@ class ClosedDMsScreen extends BaseScreen {
 
                 <!-- DMs List -->
                 <div class="dms-section">
-                    <div class="total-dms">Total: 0 DMs</div>
+                    <div class="total-dms">
+                        Total: 0 DMs
+                        <div class="filter-buttons">
+                            <button class="filter-btn active" data-filter="all">All</button>
+                            <button class="filter-btn" data-filter="open">Open</button>
+                            <button class="filter-btn" data-filter="closed">Closed</button>
+                        </div>
+                    </div>
                     <div class="dms-container">
                         <div class="dms-header">
                             <div class="channel-header">
@@ -89,11 +96,6 @@ class ClosedDMsScreen extends BaseScreen {
                             </div>
                             <div class="search-container">
                                 <input type="text" id="dmSearch" placeholder="Search DMs..." class="dm-search">
-                                <div class="filter-buttons">
-                                    <button class="filter-btn active" data-filter="all">All</button>
-                                    <button class="filter-btn" data-filter="open">Open</button>
-                                    <button class="filter-btn" data-filter="closed">Closed</button>
-                                </div>
                             </div>
                             <span>Message Count</span>
                             <span>Open Dm</span>
@@ -233,7 +235,26 @@ class ClosedDMsScreen extends BaseScreen {
     updateTotalCount(count) {
         const totalDMs = document.querySelector('.total-dms');
         if (totalDMs) {
-            totalDMs.textContent = `Total: ${count} DM${count !== 1 ? 's' : ''}`;
+            // Find the existing filter buttons
+            const filterButtons = totalDMs.querySelector('.filter-buttons');
+            
+            // Update the text content while preserving the filter buttons
+            totalDMs.innerHTML = `Total: ${count} DM${count !== 1 ? 's' : ''}`;
+            
+            // If filter buttons don't exist, create them
+            if (!filterButtons) {
+                const newFilterButtons = document.createElement('div');
+                newFilterButtons.className = 'filter-buttons';
+                newFilterButtons.innerHTML = `
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="open">Open</button>
+                    <button class="filter-btn" data-filter="closed">Closed</button>
+                `;
+                totalDMs.appendChild(newFilterButtons);
+            } else {
+                // Re-append existing filter buttons
+                totalDMs.appendChild(filterButtons);
+            }
         }
     }
 

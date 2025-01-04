@@ -1,6 +1,6 @@
 {
-  "name": "test",
-  "version": "0.1.0",
+  "name": "DiscordTool",
+  "version": "1.0.0",
   "private": true,
   "main": "main.js",
   "scripts": {
@@ -16,11 +16,23 @@
     "appId": "com.example.test",
     "files": [
       "**/*",
-      "!node_modules/**/*"
+      "!node_modules/.bin",
+      "!node_modules/electron/**/*",
+      "!node_modules/electron-builder/**/*",
+      "!**/*.map"
     ],
     "directories": {
       "output": "dist"
-    }
+    },
+    "extraResources": [
+      {
+        "from": "node_modules/",
+        "to": "node_modules/",
+        "filter": [
+          "electron-store/**/*"
+        ]
+      }
+    ]
   },
   "dependencies": {
     "electron-store": "^8.2.0"

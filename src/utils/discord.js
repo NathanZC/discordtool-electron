@@ -103,26 +103,38 @@ class DiscordAPI {
         afterDate = null,
         content = null,
         authorId = null,
-        channelId = null
+        channelId = null,
+        isServerChannel = false
     }) {
         try {
-            // Build search parameters
+            // If it's a server channel, we need to first get the guild ID
+            if (isServerChannel) {
+                try {
+                    const channelResponse = await this.makeRequest(`/channels/${channelOrGuildId}`);
+                    if (!channelResponse.ok) {
+                        throw new Error('MISSING_ACCESS');
+                    }
+                    const channelData = await channelResponse.json();
+                    // Update the IDs for the search
+                    const guildId = channelData.guild_id;
+                    channelId = channelOrGuildId; // Store original channel ID
+                    channelOrGuildId = guildId; // Use guild ID for the search
+                    isGuild = true; // Switch to guild search mode
+                } catch (error) {
+                    console.error('Error fetching guild ID:', error);
+                    throw error;
+                }
+            }
+
+            // Rest of the existing searchMessages code remains the same
             const params = new URLSearchParams();
             
-            // Handle authorId as either single ID or array of IDs
             if (authorId) {
                 if (Array.isArray(authorId)) {
-                    // Discord's search API supports multiple author_id parameters
                     authorId.forEach(id => params.append('author_id', id));
                 } else {
                     params.append('author_id', authorId);
                 }
-            } else if (!isGuild) {
-                // For DMs, author_id is required
-                if (!this.userId) {
-                    throw new Error('User ID is required for searching DM messages');
-                }
-                params.append('author_id', this.userId);
             }
 
             if (offset) params.append('offset', offset);
@@ -130,19 +142,14 @@ class DiscordAPI {
             if (afterDate) params.append('min_id', afterDate);
             if (content) params.append('content', content);
             
-            // Set endpoint based on whether it's a guild or channel search
+            // Set endpoint and add channel_id for guild searches
             const endpoint = isGuild
                 ? `/guilds/${channelOrGuildId}/messages/search`
                 : `/channels/${channelOrGuildId}/messages/search`;
 
-            // Add include_nsfw for guild searches
             if (isGuild) {
-                params.append('include_nsfw', 'true');
-            }
-
-            // Add channel_id to search parameters if provided
-            if (channelId && isGuild) {
                 params.append('channel_id', channelId);
+                params.append('include_nsfw', 'true');
             }
 
             // Make the request with search parameters
@@ -154,9 +161,7 @@ class DiscordAPI {
             );
 
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error(`Failed to fetch messages: ${response.status} - ${errorText}`);
-                return null;
+                throw new Error('MISSING_ACCESS');
             }
 
             const data = await response.json();
@@ -178,8 +183,7 @@ class DiscordAPI {
             };
 
         } catch (error) {
-            console.error('Error searching messages:', error);
-            return null;
+            throw error;
         }
     }
 
@@ -194,7 +198,8 @@ class DiscordAPI {
         deleteDelay = () => 1000,
         onProgress = null,
         isRunning = () => true,
-        isGuild = false
+        isGuild = false,
+        isServerChannel = false
     }) {
         console.log(`deleteChannelMessages started for ${isGuild ? 'server' : 'channel'}: ${channelName}`);
         const seen = new Set();
@@ -226,7 +231,8 @@ class DiscordAPI {
                     afterDate,
                     content: contentSearch,
                     authorId: authorId,
-                    channelId: specificChannelId
+                    channelId: specificChannelId,
+                    isServerChannel: isServerChannel
                 });
 
                 console.log("Search result:", searchResult ? "found messages" : "no messages found");
@@ -332,7 +338,18 @@ class DiscordAPI {
 
             } catch (error) {
                 console.error("Error in deletion loop:", error);
-                Console.error(`Error processing messages: ${error.message}`);
+                
+                // Check for Missing Access error
+                if (error.message === 'MISSING_ACCESS') {
+                    return {
+                        success: false,
+                        deletedCount: deleteMessagesCount,
+                        total,
+                        error: 'MISSING_ACCESS',
+                        code: 50001  // Discord's error code for Missing Access
+                    };
+                }
+
                 if (!isRunning()) return stopDeletion();
                 await new Promise(resolve => setTimeout(resolve, deleteDelay() * 2));
             }
@@ -361,63 +378,83 @@ class DiscordAPI {
         }
     }
 
-    async getMessageCountForUser(channelId, authorId = null, isGuild = false, specificChannelId = null) {
+    async getMessageCountForUser(channelId, authorId = null, isGuild = false, specificChannelId = null, isServerChannel = false) {
         console.log("getMessageCountForUser started");
-        const headers = {
-            Authorization: this.token
-        };
         
-        const params = new URLSearchParams();
-        if (authorId) {
-            params.append('author_id', authorId);
-        }
-        if (specificChannelId && isGuild) {
-            params.append('channel_id', specificChannelId);
-        }
-        params.append('include_nsfw', 'true');
-
-        async function getMessageCount(url, params, delay = 1000, maxRetries = 5) {
-            let retryCount = 0;
-            
-            while (retryCount < maxRetries) {
+        try {
+            // If it's a server channel, we need to first get the guild ID
+            if (isServerChannel) {
                 try {
-                    const response = await fetch(`${url}?${params.toString()}`, { headers });
-                    
-                    if (response.ok) {
-                        const data = await response.json();
-                        return data.total_results || 0;
-                    } else if (response.status === 429) {
-                        const retryAfter = parseInt(response.headers.get('Retry-After') || delay/1000) + 1;
-                        console.log(`Rate limited. Retrying in ${retryAfter} seconds...`);
-                        Console.warn(`Rate limited. Retrying in ${retryAfter} seconds...`);
-                        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-                        retryCount++;
-                        delay *= 2; // Exponential backoff
-                    } else {
-                        console.error(`Failed to fetch messages: ${response.status} - ${await response.text()}`);
-                        return null;
+                    const channelResponse = await this.makeRequest(`/channels/${channelId}`);
+                    if (!channelResponse.ok) {
+                        throw new Error('MISSING_ACCESS');
                     }
+                    const channelData = await channelResponse.json();
+                    // Update the IDs for the search
+                    const guildId = channelData.guild_id;
+                    specificChannelId = channelId; // Store original channel ID
+                    channelId = guildId; // Use guild ID for the search
+                    isGuild = true; // Switch to guild search mode
                 } catch (error) {
-                    console.error('Error fetching message count:', error);
-                    Console.error('Error fetching message count:', error);
-                    retryCount++;
-                    await new Promise(resolve => setTimeout(resolve, delay));
+                    console.error('Error fetching guild ID:', error);
+                    throw error;
                 }
             }
+    
+            const headers = {
+                Authorization: this.token
+            };
             
-            console.log('Max retries reached. Returning null.');
-            return null;
-        }
-
-        try {
+            const params = new URLSearchParams();
+            if (authorId) {
+                params.append('author_id', authorId);
+            }
+            if (specificChannelId && isGuild) {
+                params.append('channel_id', specificChannelId);
+            }
+            params.append('include_nsfw', 'true');
+    
+            // Rest of the existing getMessageCount function logic
+            async function getMessageCount(url, params, delay = 1000, maxRetries = 5) {
+                let retryCount = 0;
+                
+                while (retryCount < maxRetries) {
+                    try {
+                        const response = await fetch(`${url}?${params.toString()}`, { headers });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            return data.total_results || 0;
+                        } else if (response.status === 429) {
+                            const retryAfter = parseInt(response.headers.get('Retry-After') || delay/1000) + 1;
+                            console.log(`Rate limited. Retrying in ${retryAfter} seconds...`);
+                            Console.warn(`Rate limited. Retrying in ${retryAfter} seconds...`);
+                            await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+                            retryCount++;
+                            delay *= 2; // Exponential backoff
+                        } else {
+                            console.error(`Failed to fetch messages: ${response.status} - ${await response.text()}`);
+                            return null;
+                        }
+                    } catch (error) {
+                        console.error('Error fetching message count:', error);
+                        Console.error('Error fetching message count:', error);
+                        retryCount++;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    }
+                }
+                
+                console.log('Max retries reached. Returning null.');
+                return null;
+            }
+    
             let url;
             if (isGuild) {
-                // For guild searches, we use the serverId directly
                 url = `${this.baseURL}/guilds/${channelId}/messages/search`;
             } else {
                 url = `${this.baseURL}/channels/${channelId}/messages/search`;
             }
-
+    
             return await getMessageCount(url, params);
         } catch (error) {
             console.error('Error in getMessageCountForUser:', error);
