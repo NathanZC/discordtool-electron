@@ -8,7 +8,7 @@ dist/
 
 # testing
 /coverage
-
+release/
 # production
 /build
 
