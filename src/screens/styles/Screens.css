@@ -1599,12 +1599,12 @@
 
 .filter-btn:hover {
     background: #686d73;
-    color: #fff;
+    color: white;
 }
 
 .filter-btn.active {
     background: #7289da;
-    color: #fff;
+    color: white;
 }
 
 .filter-btn.active:hover {
@@ -2283,4 +2283,106 @@
 
 .modal-btn.cancel:hover {
     background: #686d73;
+}
+
+/* Help Screen Specific Styles */
+.help-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.help-section {
+    background: #2f3136;
+    padding: 24px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+}
+
+.help-section h2 {
+    color: #fff;
+    margin-bottom: 16px;
+    font-size: 1.5rem;
+}
+
+.help-section h3 {
+    color: #7289da;
+    margin: 20px 0 12px;
+    font-size: 1.2rem;
+}
+
+.help-section p {
+    color: #dcddde;
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+.feature-block {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #40444b;
+}
+
+.feature-block:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.feature-list {
+    list-style: none;
+    padding-left: 24px;
+    margin: 12px 0;
+}
+
+.feature-list li {
+    color: #dcddde;
+    margin-bottom: 8px;
+    position: relative;
+    line-height: 1.4;
+}
+
+.feature-list li::before {
+    content: ">";  /* Using a simple greater-than symbol */
+    color: #7289da;
+    position: absolute;
+    left: -20px;
+    font-weight: bold;
+}
+
+.important-notice {
+    border-left: 4px solid #faa61a;
+    background: rgba(250, 166, 26, 0.1);
+}
+
+.steps-list {
+    padding-left: 28px;
+    margin: 16px 0;
+}
+
+.steps-list li {
+    color: #dcddde;
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+
+.tip-box {
+    background: rgba(114, 137, 218, 0.1);
+    border-left: 4px solid #7289da;
+    padding: 12px 16px;
+    margin-top: 16px;
+    border-radius: 0 4px 4px 0;
+}
+
+code {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    color: #dcddde;
+}
+
+.note {
+    font-style: italic;
+    color: #b9bbbe;
+    margin-top: 12px;
 }
