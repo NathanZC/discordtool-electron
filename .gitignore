@@ -9,6 +9,8 @@ dist/
 # testing
 /coverage
 release/
+release/*
+*.exe
 # production
 /build
 
