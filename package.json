@@ -24,6 +24,7 @@
       "output": "release",
       "buildResources": "build"
     },
+    "icon": "icon.png",
     "extraResources": [
       {
         "from": "node_modules/",
