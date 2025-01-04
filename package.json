@@ -1,5 +1,5 @@
 {
-  "name": "DiscordTool",
+  "name": "discord-tool",
   "version": "1.0.0",
   "private": true,
   "main": "main.js",
@@ -13,7 +13,7 @@
     "fs-extra": "^11.2.0"
   },
   "build": {
-    "appId": "com.example.test",
+    "appId": "com.example.discordtool",
     "files": [
       "**/*",
       "!node_modules/.bin",

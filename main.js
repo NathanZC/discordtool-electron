@@ -27,12 +27,6 @@ function createWindow() {
     // do this when done
     // win.setMenu(null);
     win.loadFile('index.html');
-
-    win.webContents.on('dom-ready', () => {
-        win.webContents.executeJavaScript(`
-            window.trashIconPath = '${path.join(__dirname, 'assets', 'images', 'trash.png').replace(/\\/g, '/')}';
-        `);
-    });
 }
 
 app.whenReady().then(() => {
