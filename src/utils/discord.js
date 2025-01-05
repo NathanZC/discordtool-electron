@@ -630,10 +630,6 @@ class DiscordAPI {
                 const previewResponse = await this.makeRequest(`/guilds/${guildId}/preview`);
                 const previewData = previewResponse.ok ? await previewResponse.json() : {};
                 
-                // Get guild incidents/safety data
-                const incidentsResponse = await this.makeRequest(`/guilds/${guildId}/incidents`);
-                const incidentsData = incidentsResponse.ok ? await incidentsResponse.json() : {};
-                
                 // Convert BigInt to Number before creating Date
                 const timestamp = Number((BigInt(guildData.id) >> 22n) + 1420070400000n);
                 
@@ -654,11 +650,10 @@ class DiscordAPI {
                     max_members: guildData.max_members,
                     max_presences: guildData.max_presences,
                     
-                    // Safety & Incidents
+                    // Safety & Settings
                     safety_alerts_channel_id: guildData.safety_alerts_channel_id,
                     explicit_content_filter: guildData.explicit_content_filter,
                     mfa_level: guildData.mfa_level,
-                    incidents: incidentsData,
                     
                     // Other Details
                     features: guildData.features,
