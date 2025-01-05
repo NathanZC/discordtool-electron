@@ -1543,9 +1543,9 @@
 
 .filter-btn {
     padding: 6px 12px;
-    border: none;
+    border: 2px solid #4f545c;
     border-radius: 4px;
-    background: #4f545c;
+    background: transparent;
     color: #dcddde;
     font-size: 14px;
     font-weight: 500;
@@ -1556,17 +1556,21 @@
 }
 
 .filter-btn:hover {
-    background: #686d73;
+    background: rgba(79, 84, 92, 0.3);
+    border-color: #686d73;
     color: white;
 }
 
 .filter-btn.active {
-    background: #7289da;
-    color: white;
+    background: transparent;
+    border-color: #7289da;
+    color: #7289da;
 }
 
 .filter-btn.active:hover {
-    background: #677bc4;
+    background: rgba(114, 137, 218, 0.1);
+    border-color: #677bc4;
+    color: #677bc4;
 }
 
 /* Add subtle animation for button state changes */
@@ -2108,9 +2112,9 @@
 
 .filter-btn {
     padding: 6px 12px;
-    border: none;
+    border: 2px solid #4f545c;
     border-radius: 4px;
-    background: #4f545c;
+    background: transparent;
     color: #dcddde;
     font-size: 14px;
     font-weight: 500;
@@ -2121,17 +2125,21 @@
 }
 
 .filter-btn:hover {
-    background: #686d73;
+    background: rgba(79, 84, 92, 0.3);
+    border-color: #686d73;
     color: white;
 }
 
 .filter-btn.active {
-    background: #7289da;
-    color: white;
+    background: transparent;
+    border-color: #7289da;
+    color: #7289da;
 }
 
 .filter-btn.active:hover {
-    background: #677bc4;
+    background: rgba(114, 137, 218, 0.1);
+    border-color: #677bc4;
+    color: #677bc4;
 }
 
 /* Add these new styles */
