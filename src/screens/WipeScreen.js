@@ -16,6 +16,8 @@ class WipeScreen extends BaseScreen {
         this.channels = new Map();
         this.store = new Store();
         this.openDMs = new Set();
+        this.isRunning = false;
+        this.isCountingMessages = false;
         
         // Initialize channel states for current user
         this.channelStates = this.loadChannelStates();
@@ -898,6 +900,11 @@ class WipeScreen extends BaseScreen {
             Console.error('Error loading saved file:', error);
             this.saveFilePath(null);
         }
+    }
+
+    // Add this method
+    isOperationInProgress() {
+        return this.isRunning || this.isCountingMessages;
     }
 }
 

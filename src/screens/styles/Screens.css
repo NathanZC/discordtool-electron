@@ -322,7 +322,7 @@
     margin: 0 0 0.5rem 0;
 }
 
-/* Update DMs container for new layout */
+/* Update DMs container for proper height calculation */
 .dms-container {
     flex-grow: 1;
     display: flex;
@@ -330,7 +330,9 @@
     background: #2f3136;
     border-radius: 8px;
     overflow: hidden;
-    height: calc(100vh - 300px);
+    height: calc(100vh - 400px); /* Adjusted height calculation */
+    min-height: 200px; /* Add minimum height */
+    max-height: calc(100vh - 400px); /* Add maximum height */
 }
 
 .dms-header {
@@ -344,8 +346,7 @@
 
 .dms-list {
     flex: 1;
-    min-height: 0;
-    max-height: 100%;
+    min-height: 0; /* Important for flex child scrolling */
     overflow-y: auto;
     padding: 0.5rem;
 }
@@ -486,12 +487,6 @@
     font-family: monospace;
     font-size: 0.9rem;
     min-height: 0;
-}
-
-.dms-container {
-    background: #2f3136;
-    border-radius: 8px;
-    overflow: hidden;
 }
 
 .dm-row {
@@ -874,12 +869,6 @@
 
 .console-entry.error {
     color: #f04747;
-}
-
-.dms-container {
-    background: #2f3136;
-    border-radius: 8px;
-    overflow: hidden;
 }
 
 .dms-header {

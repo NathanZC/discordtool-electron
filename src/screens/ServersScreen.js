@@ -14,6 +14,10 @@ class ServersScreen extends BaseScreen {
         this.api = new DiscordAPI(token, userId);
     }
 
+    isOperationInProgress() {
+        return this.isRunning || this.isCountingMessages;
+    }
+
     render(container) {
         container.innerHTML = `
             <div class="screen-container">

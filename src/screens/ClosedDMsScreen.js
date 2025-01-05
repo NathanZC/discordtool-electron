@@ -13,6 +13,8 @@ class ClosedDMsScreen extends BaseScreen {
         this.closedDMs = new Map(); // Store closed DM data
         this.openDMs = new Set(); // Track which DMs are already open
         this.store = new Store(); // Add store instance
+        this.isRunning = false;
+        this.isCountingMessages = false;
         
         // Load saved file path and data for current user
         this.loadedFilePath = this.loadFilePath();
@@ -369,7 +371,14 @@ class ClosedDMsScreen extends BaseScreen {
                 const recipient = row.querySelector('.dm-recipient').textContent.toLowerCase();
                 const isVisible = recipient.includes(searchTerm);
                 row.style.display = isVisible ? '' : 'none';
-                if (isVisible) visibleCount++;
+                if (isVisible) {
+                    // Update the index for visible rows
+                    visibleCount++;
+                    const indexSpan = row.querySelector('.dm-index');
+                    if (indexSpan) {
+                        indexSpan.textContent = `${visibleCount}.`;
+                    }
+                }
             });
 
             this.updateTotalCount(visibleCount);
@@ -575,7 +584,9 @@ class ClosedDMsScreen extends BaseScreen {
     async startOperation() {
         const startIndex = parseInt(document.querySelector('#startIndex').value) - 1;
         const endIndex = parseInt(document.querySelector('#endIndex').value) - 1;
-        const dmRows = Array.from(document.querySelectorAll('.dm-row'));
+        // Only get visible rows (those that match the current search/filter)
+        const dmRows = Array.from(document.querySelectorAll('.dm-row'))
+            .filter(row => row.style.display !== 'none');
         const delaySlider = document.querySelector('#operationDelay');
         
         if (isNaN(startIndex) || isNaN(endIndex)) {
@@ -653,6 +664,10 @@ class ClosedDMsScreen extends BaseScreen {
         if (this.isRunning) {
             Console.warn('Operation stopped by user');
         }
+    }
+
+    isOperationInProgress() {
+        return this.isRunning || this.isCountingMessages;
     }
 }
 

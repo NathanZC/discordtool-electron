@@ -105,6 +105,16 @@ class Navigation {
             const menuItem = e.target.closest('.menu-item, .logout-btn');
             if (menuItem) {
                 const screen = menuItem.dataset.screen;
+                
+                // Check if navigation is blocked due to operation in progress
+                if (this.currentScreenInstance && 
+                    typeof this.currentScreenInstance.isOperationInProgress === 'function' && 
+                    this.currentScreenInstance.isOperationInProgress()) {
+                    Console.warn('Please stop the current operation before navigating away');
+                    return;
+                }
+                
+                // Only update menu and navigate if not blocked
                 this.navigateTo(screen);
                 
                 // Remove active class from all items
@@ -121,14 +131,6 @@ class Navigation {
     }
 
     navigateTo(screen) {
-        // Add check for running operations
-        if (this.currentScreenInstance && 
-            typeof this.currentScreenInstance.isOperationInProgress === 'function' && 
-            this.currentScreenInstance.isOperationInProgress()) {
-            Console.warn('Please stop the current operation before navigating away');
-            return;
-        }
-
         const mainContent = document.getElementById('main-content');
         
         if (screen === 'logout') {
@@ -151,23 +153,23 @@ class Navigation {
                 break;
             case 'servers':
                 Console.show();
-                const serversScreen = new ServersScreen(this.token, this.userId);
-                serversScreen.render(mainContent);
+                this.currentScreenInstance = new ServersScreen(this.token, this.userId);
+                this.currentScreenInstance.render(mainContent);
                 break;
             case 'closed-dms':
                 Console.show();
-                const closedDMsScreen = new ClosedDMsScreen(this.token, this.userId);
-                closedDMsScreen.render(mainContent);
+                this.currentScreenInstance = new ClosedDMsScreen(this.token, this.userId);
+                this.currentScreenInstance.render(mainContent);
                 break;
             case 'wipe':
                 Console.show();
-                const wipeScreen = new WipeScreen(this.token, this.userId);
-                wipeScreen.render(mainContent);
+                this.currentScreenInstance = new WipeScreen(this.token, this.userId);
+                this.currentScreenInstance.render(mainContent);
                 break;
             case 'help':
                 Console.hide(); // Hide console for help screen
-                const helpScreen = new HelpScreen(this.token, this.userId);
-                helpScreen.render(mainContent);
+                this.currentScreenInstance = new HelpScreen(this.token, this.userId);
+                this.currentScreenInstance.render(mainContent);
                 break;
             default:
                 Console.hide(); // Hide by default
