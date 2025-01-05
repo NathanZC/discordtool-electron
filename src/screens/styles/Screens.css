@@ -335,14 +335,7 @@
     max-height: calc(100vh - 400px); /* Add maximum height */
 }
 
-.dms-header {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: #2f3136;
-    padding: 1rem;
-    border-bottom: 1px solid #202225;
-}
+
 
 .dms-list {
     flex: 1;
@@ -500,6 +493,7 @@
     gap: 1rem;
     text-align: left;
     transition: background-color 0.2s ease;
+    background-color: #36393f; /* Default/initial state */
 }
 
 .dm-row:hover {
@@ -609,11 +603,6 @@
 .dm-last-message {
     color: #8e9297;
     font-size: 0.9rem;
-}
-
-.dm-actions {
-    display: flex;
-    gap: 0.5rem;
 }
 
 .dm-action-btn {
@@ -879,18 +868,9 @@
     border-bottom: 1px solid #202225;
     font-weight: 500;
     gap: 1rem;
-}
-
-.dm-row {
-    display: grid;
-    grid-template-columns: 1fr 150px auto;
-    padding: 0.75rem;
-    border-radius: 4px;
-    margin-bottom: 0.25rem;
-    background: #36393f;
-    align-items: center;
-    gap: 1rem;
-    text-align: left;
+    position: sticky;
+    top: 0;
+    z-index: 1;
 }
 
 .dm-row:hover {
@@ -1675,12 +1655,6 @@
     color: #666;
 }
 
-.dm-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
-
 .user-info-btn {
     padding: 4px;
     background: transparent;
@@ -2025,12 +1999,6 @@
     color: white;
 }
 
-/* Channel States */
-.dm-row {
-    transition: background-color 0.2s ease;
-    background-color: #36393f; /* Default/initial state */
-}
-
 .dm-row:hover {
     filter: brightness(1.1);
 }
@@ -2071,12 +2039,6 @@
 
 .lock-btn.locked {
     color: #f04747;
-}
-
-.dm-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
 }
 
 .wipe-messages-btn:disabled {
@@ -2413,12 +2375,6 @@ code {
     padding: 0 8px;
 }
 
-/* Ensure the action buttons container maintains alignment */
-.dm-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
 .closed-dm-channel {
     display: flex;
     align-items: center;
@@ -2430,12 +2386,6 @@ code {
 }
 
 .closed-dm-count {
-    text-align: center;
-    padding: 0 1rem;
-    white-space: nowrap;
-}
-
-.closed-dm-action {
     text-align: center;
     padding: 0 1rem;
     white-space: nowrap;

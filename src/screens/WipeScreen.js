@@ -219,6 +219,10 @@ class WipeScreen extends BaseScreen {
             this.channels.set(channelId, channelName);
         });
 
+        // Force all filters to be active initially
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        filterButtons.forEach(btn => btn.classList.add('active'));
+
         this.renderChannelsList();
     }
 
@@ -241,20 +245,25 @@ class WipeScreen extends BaseScreen {
 
         const searchInput = container.querySelector('#channelSearch');
         const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
-        const activeFilter = document.querySelector('.filter-btn.active')?.dataset.filter || 'all';
+        const activeFilters = Array.from(document.querySelectorAll('.filter-btn.active')).map(btn => btn.dataset.filter);
 
         const filteredChannels = Array.from(this.channels.entries())
             .filter(([channelId, channelName]) => {
                 // Apply search filter
                 const matchesSearch = channelName.toLowerCase().includes(searchTerm);
                 
-                // Apply type filter
+                // Check type filters (server/dm)
                 const isDM = channelName.startsWith('Direct Message with');
-                switch (activeFilter) {
-                    case 'server': return !isDM && matchesSearch;
-                    case 'dm': return isDM && matchesSearch;
-                    default: return matchesSearch;
-                }
+                const typeMatches = (isDM && activeFilters.includes('dm')) || 
+                                  (!isDM && activeFilters.includes('server'));
+
+                // Check lock filters
+                const channelState = this.getChannelState(channelId);
+                const lockMatches = (channelState.locked && activeFilters.includes('locked')) || 
+                                  (!channelState.locked && activeFilters.includes('unlocked'));
+                
+                // Must match both type and lock filters
+                return matchesSearch && typeMatches && lockMatches;
             });
 
         if (filteredChannels.length === 0) {
@@ -330,26 +339,46 @@ class WipeScreen extends BaseScreen {
     updateTotalCount(count) {
         const totalChannels = document.querySelector('.total-dms');
         if (totalChannels) {
-            // Find the existing filter buttons
-            const filterButtons = totalChannels.querySelector('.filter-buttons');
+            const existingFilterButtons = totalChannels.querySelector('.filter-buttons');
+            const filterStates = {
+                server: true,
+                dm: true,
+                locked: true,
+                unlocked: true
+            };
             
-            // Update the text content while preserving the filter buttons
+            // Only override defaults if existing buttons are found
+            if (existingFilterButtons) {
+                existingFilterButtons.querySelectorAll('.filter-btn').forEach(btn => {
+                    filterStates[btn.dataset.filter] = btn.classList.contains('active');
+                });
+            }
+            
+            // Update the text content
             totalChannels.innerHTML = `Total: ${count} Channel${count !== 1 ? 's' : ''}`;
             
-            // If filter buttons don't exist, create them
-            if (!filterButtons) {
-                const newFilterButtons = document.createElement('div');
-                newFilterButtons.className = 'filter-buttons';
-                newFilterButtons.innerHTML = `
-                    <button class="reset-states-btn" title="Reset all channel states">Reset States</button>
-                    <button class="filter-btn active" data-filter="all">All</button>
-                    <button class="filter-btn" data-filter="server">Servers</button>
-                    <button class="filter-btn" data-filter="dm">DMs</button>
-                `;
-                totalChannels.appendChild(newFilterButtons);
-            } else {
-                // Re-append existing filter buttons
-                totalChannels.appendChild(filterButtons);
+            // Create filter buttons
+            const newFilterButtons = document.createElement('div');
+            newFilterButtons.className = 'filter-buttons';
+            newFilterButtons.innerHTML = `
+                <button class="reset-states-btn" title="Reset all channel states">Reset States</button>
+                <button class="filter-btn ${filterStates.server ? 'active' : ''}" data-filter="server">Servers</button>
+                <button class="filter-btn ${filterStates.dm ? 'active' : ''}" data-filter="dm">DMs</button>
+                <button class="filter-btn ${filterStates.locked ? 'active' : ''}" data-filter="locked">Locked</button>
+                <button class="filter-btn ${filterStates.unlocked ? 'active' : ''}" data-filter="unlocked">Unlocked</button>
+            `;
+            totalChannels.appendChild(newFilterButtons);
+            
+            // Add event listeners to the new buttons
+            const filterButtonsContainer = totalChannels.querySelector('.filter-buttons');
+            if (filterButtonsContainer) {
+                filterButtonsContainer.addEventListener('click', (e) => {
+                    const filterBtn = e.target.closest('.filter-btn');
+                    if (filterBtn) {
+                        filterBtn.classList.toggle('active');
+                        this.renderChannelsList();
+                    }
+                });
             }
         }
     }
@@ -466,15 +495,17 @@ class WipeScreen extends BaseScreen {
             }
         });
 
-        // Filter buttons
-        const filterButtons = container.querySelectorAll('.filter-btn');
-        filterButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                filterButtons.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                this.renderChannelsList();
+        // Filter buttons - Update this section
+        const filterButtonsContainer = container.querySelector('.filter-buttons');
+        if (filterButtonsContainer) {
+            filterButtonsContainer.addEventListener('click', (e) => {
+                const filterBtn = e.target.closest('.filter-btn');
+                if (filterBtn) {
+                    filterBtn.classList.toggle('active');
+                    this.renderChannelsList();
+                }
             });
-        });
+        }
 
         // Add reset states button listener
         const resetStatesBtn = container.querySelector('.reset-states-btn');
