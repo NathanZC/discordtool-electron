@@ -1,3 +1,5 @@
+const { clipboard, ipcRenderer } = require('electron');
+
 class Console {
     static init() {
         const consoleContent = document.getElementById('console-content');
@@ -27,6 +29,15 @@ class Console {
         }
     }
 
+    static scrollToBottom(consoleOutput) {
+        // Wait for images to load and content to render
+        setTimeout(() => {
+            requestAnimationFrame(() => {
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            });
+        }, 250); // Small delay to ensure everything is rendered
+    }
+
     static log(message, type = 'info') {
         const consoleOutput = document.getElementById('consoleOutput');
         if (!consoleOutput) return;
@@ -37,7 +48,8 @@ class Console {
         logEntry.style.whiteSpace = 'pre-wrap';
         logEntry.style.wordBreak = 'break-word';
         consoleOutput.appendChild(logEntry);
-        consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        
+        this.scrollToBottom(consoleOutput);
     }
 
     static clear() {
@@ -73,7 +85,10 @@ class Console {
         infoBlock.style.wordBreak = 'break-word';
         
         const formatLine = (label, value) => `${label}: ${value}<br>`;
-        const formatLink = (url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">.../${url.split('/').pop()}</a>`;
+        const formatLink = (url) => `
+            <div class="console-image-container">
+                <img src="${url}" alt="Discord Asset" class="console-image">
+            </div>`;
         
         const avatarUrl = userInfo.avatar ? 
             `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : null;
@@ -174,7 +189,7 @@ class Console {
 
         infoBlock.innerHTML = lines.join('');
         consoleOutput.appendChild(infoBlock);
-        consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        this.scrollToBottom(consoleOutput);
     }
 
     static printServerInfo(serverInfo) {
@@ -183,11 +198,13 @@ class Console {
 
         const infoBlock = document.createElement('div');
         infoBlock.className = 'console-entry info user-info';
-        infoBlock.style.whiteSpace = 'pre-wrap';
         infoBlock.style.wordBreak = 'break-word';
         
         const formatLine = (label, value) => value ? `${label}: ${value}<br>` : '';
-        const formatLink = (url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">.../${url.split('/').pop()}</a>`;
+        const formatLink = (url) => `
+            <div class="console-image-container">
+                <img src="${url}" alt="Discord Asset" class="console-image">
+            </div>`;
         
         const createSection = (title, content, isExpandable = false) => {
             if (content.length === 0) return '';
@@ -274,8 +291,120 @@ class Console {
         });
 
         consoleOutput.appendChild(infoBlock);
-        consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        this.scrollToBottom(consoleOutput);
+    }
+
+    static printChannelInfo(channelInfo) {
+        const consoleOutput = document.getElementById('consoleOutput');
+        if (!consoleOutput) return;
+
+        const infoBlock = document.createElement('div');
+        infoBlock.className = 'console-entry info user-info';
+        infoBlock.style.whiteSpace = 'pre-wrap';
+        infoBlock.style.wordBreak = 'break-word';
+
+        const formatLine = (label, value) => value ? `${label}: ${value}<br>` : '';
+        
+        const lines = ['━━━ Channel Information ━━━<br>'];
+
+        // Basic Info
+        const basicInfo = [];
+        basicInfo.push(formatLine('Name', channelInfo.name));
+        basicInfo.push(formatLine('Channel ID', channelInfo.id));
+        basicInfo.push(formatLine('Type', channelInfo.type));
+        basicInfo.push(formatLine('Created At', channelInfo.created_at.toLocaleString()));
+        if (channelInfo.topic) basicInfo.push(formatLine('Topic', channelInfo.topic));
+        if (channelInfo.position) basicInfo.push(formatLine('Position', channelInfo.position));
+        lines.push(...basicInfo);
+
+        // Server Info
+        if (channelInfo.guild_id) {
+            const serverInfo = [];
+            serverInfo.push(formatLine('Server ID', channelInfo.guild_id));
+            if (channelInfo.parent_id) serverInfo.push(formatLine('Category ID', channelInfo.parent_id));
+            lines.push('<br>━━━ Server Details ━━━<br>', ...serverInfo);
+        }
+
+        // Channel Settings
+        const settings = [];
+        if (channelInfo.rate_limit_per_user) settings.push(formatLine('Slowmode', `${channelInfo.rate_limit_per_user} seconds`));
+        if (channelInfo.nsfw) settings.push(formatLine('NSFW', 'Yes'));
+        if (channelInfo.user_limit) settings.push(formatLine('User Limit', channelInfo.user_limit));
+        if (channelInfo.bitrate) settings.push(formatLine('Bitrate', `${channelInfo.bitrate / 1000}kbps`));
+
+        if (settings.length > 0) {
+            lines.push('<br>━━━ Channel Settings ━━━<br>', ...settings);
+        }
+
+        // Thread Settings (if applicable)
+        if (channelInfo.thread_metadata) {
+            const threadInfo = [];
+            threadInfo.push(formatLine('Auto Archive Duration', `${channelInfo.thread_metadata.auto_archive_duration} minutes`));
+            threadInfo.push(formatLine('Archived', channelInfo.thread_metadata.archived ? 'Yes' : 'No'));
+            threadInfo.push(formatLine('Locked', channelInfo.thread_metadata.locked ? 'Yes' : 'No'));
+            lines.push('<br>━━━ Thread Settings ━━━<br>', ...threadInfo);
+        }
+
+        lines.push('━━━━━━━━━━━━━━━━━');
+
+        infoBlock.innerHTML = lines.join('');
+        consoleOutput.appendChild(infoBlock);
+        this.scrollToBottom(consoleOutput);
+    }
+
+    static printGroupDMInfo(channelInfo) {
+        const consoleOutput = document.getElementById('consoleOutput');
+        if (!consoleOutput) return;
+
+        const infoBlock = document.createElement('div');
+        infoBlock.className = 'console-entry info user-info';
+        infoBlock.style.whiteSpace = 'pre-wrap';
+        infoBlock.style.wordBreak = 'break-word';
+
+        const formatLine = (label, value) => value !== undefined && value !== null ? `${label}: ${value}<br>` : '';
+        
+        const lines = ['—————— Group DM Information ——————<br>'];
+
+        // Basic Info
+        const basicInfo = [];
+        basicInfo.push(formatLine('Channel ID', channelInfo.id));
+        basicInfo.push(formatLine('Last Message ID', channelInfo.last_message_id));
+        basicInfo.push(formatLine('Created At', channelInfo.created_at.toLocaleString()));
+        basicInfo.push(formatLine('Owner ID', channelInfo.owner_id));
+        basicInfo.push(formatLine('Flags', channelInfo.flags));
+        lines.push(...basicInfo);
+
+        // Members Section
+        if (channelInfo.recipients && channelInfo.recipients.length > 0) {
+            lines.push('<br>—————— Members ——————<br>');
+            channelInfo.recipients.forEach((member, index) => {
+                lines.push(`${index + 1}. ${member.username}`);
+                if (member.global_name) lines.push(` (${member.global_name})`);
+                lines.push(` - ID: ${member.id}<br>`);
+            });
+            lines.push(formatLine('Total Members', channelInfo.recipients.length));
+        }
+
+        // Settings Section
+        lines.push('<br>—————— Channel Settings ——————<br>');
+        const settings = [];
+        settings.push(formatLine('Type', 'GROUP_DM'));
+        if (channelInfo.name) settings.push(formatLine('Custom Name', channelInfo.name));
+        if (channelInfo.icon) settings.push(formatLine('Has Icon', 'Yes'));
+        settings.push(formatLine('Blocked User Warning Dismissed', 
+            channelInfo.blocked_user_warning_dismissed ? 'Yes' : 'No'));
+        lines.push(...settings);
+
+        lines.push('<br>————————————————————');
+
+        infoBlock.innerHTML = lines.join('');
+        consoleOutput.appendChild(infoBlock);
+        this.scrollToBottom(consoleOutput);
     }
 }
+
+ipcRenderer.on('copy-url', (event, url) => {
+    require('electron').clipboard.writeText(url);
+});
 
 module.exports = Console; 

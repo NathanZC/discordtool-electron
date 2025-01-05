@@ -425,7 +425,7 @@ class ClosedDMsScreen extends BaseScreen {
                 }
 
                 const channelId = row.dataset.channelId;
-                const username = row.querySelector('.dm-recipient').textContent;
+                const username = row.querySelector('.dm-recipient').textContent.trim();
                 const countSpan = row.querySelector('.dm-count');
                 
                 countSpan.textContent = 'Counting...';

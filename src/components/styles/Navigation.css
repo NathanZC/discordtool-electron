@@ -59,6 +59,7 @@
 
 .expandable-section {
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .expandable-section .section-header {
@@ -79,4 +80,40 @@
 
 .expandable-section.collapsed .section-content {
     display: none;
+}
+
+.console-image-container {
+    margin: 0;
+    line-height: 0;
+    display: inline-block;
+}
+
+.console-image {
+    max-width: 128px;
+    max-height: 128px;
+    border-radius: 4px;
+    margin: 0;
+    display: block;
+}
+
+.image-actions {
+    display: flex;
+    gap: 8px;
+    line-height: normal;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+.copy-link-btn {
+    background: none;
+    border: none;
+    color: #7289da;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.copy-link-btn:hover {
+    color: #5b6eae;
 }

@@ -62,7 +62,7 @@ class ServersScreen extends BaseScreen {
                                     <input type="checkbox" id="onlyMe" checked>
                                     <span>Only My Messages</span>
                                 </label>
-                                <div class="text-filter-uid" id="userIdsContainer" style="display: none;">
+                                <div class="text-filter-uid" id="userIdsContainer">
                                     <label for="customUserIds">From User IDs:</label>
                                     <input type="text" id="customUserIds" 
                                         placeholder="Comma-separated user IDs..."

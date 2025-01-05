@@ -539,7 +539,7 @@ class WipeScreen extends BaseScreen {
                 }
 
                 const channelId = row.dataset.channelId;
-                const channelName = row.querySelector('.channel-name').textContent;
+                const channelName = row.dataset.originalName;
                 const countSpan = row.querySelector('.message-count');
                 const isServerChannel = row.dataset.channelType !== 'dm';
                 
@@ -820,12 +820,7 @@ class WipeScreen extends BaseScreen {
             try {
                 const channelInfo = await this.api.getChannelInfo(channelId);
                 if (channelInfo) {
-                    Console.log('Channel Information:');
-                    Console.log(`Name: ${channelInfo.name}`);
-                    Console.log(`Type: ${channelInfo.type}`);
-                    Console.log(`Server: ${channelInfo.guild_id ? channelInfo.guild_id : 'N/A'}`);
-                    Console.log(`Position: ${channelInfo.position}`);
-                    Console.log(`Created At: ${new Date(channelInfo.id / 4194304 + 1420070400000).toLocaleString()}`);
+                    Console.printChannelInfo(channelInfo);
                 }
             } catch (error) {
                 Console.error(`Failed to get channel info: ${error.message}`);

@@ -12,6 +12,11 @@ class OpenDMsScreen extends BaseScreen {
         this.operationDelay = 1000;
         this.store = new Store();
         this.api = new DiscordAPI(token, userId);
+        this.channelData = new Map();
+    }
+
+    isOperationInProgress() {
+        return this.isRunning || this.isCountingMessages;
     }
 
     render(container) {
@@ -296,18 +301,37 @@ class OpenDMsScreen extends BaseScreen {
                 return;
             }
 
-            // Clear existing message counts when refreshing
+            // Clear existing data
             this.dmQueue = [];
+            this.channelData.clear();
 
-            // Updated DM row rendering to include both nickname and username
+            // Store channel data and render DMs
             dmsList.innerHTML = dms.map((dm, index) => {
-                const username = dm.recipients?.[0]?.username || 'Unknown User';
-                const nickname = dm.recipients?.[0]?.global_name || username;
-                const recipientId = dm.recipients?.[0]?.id;
+                // Store the full channel data
+                this.channelData.set(dm.id, dm);
+
+                const isGroupDM = dm.type === 3; // Discord's type 3 is GROUP_DM
+                let displayName;
+                
+                if (isGroupDM) {
+                    const memberNames = dm.recipients.map(r => r.username || 'Unknown User');
+                    const visibleMembers = memberNames.slice(0, 3);
+                    const remainingCount = memberNames.length - visibleMembers.length;
+                    displayName = visibleMembers.join(', ') + 
+                        (remainingCount > 0 ? ` and ${remainingCount} more` : '');
+                } else {
+                    displayName = dm.recipients?.[0]?.username || 'Unknown User';
+                }
+
+                const nickname = isGroupDM ? 
+                    displayName : 
+                    dm.recipients?.[0]?.global_name || displayName;
+                const recipientId = isGroupDM ? null : dm.recipients?.[0]?.id;
+                
                 return `
                     <div class="dm-row" 
                         data-channel-id="${dm.id}"
-                        data-channel-name="${username}"
+                        data-channel-name="${displayName}"
                         data-recipient-id="${recipientId}">
                         <span class="dm-recipient">
                             <button class="user-info-btn" title="Get User Info">
@@ -315,7 +339,9 @@ class OpenDMsScreen extends BaseScreen {
                                     <path fill="currentColor" d="M8 0a8 8 0 100 16A8 8 0 008 0zm0 12a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm1.5-4.563a.5.5 0 01-.5.5h-2a.5.5 0 01-.5-.5v-.375c0-.5.5-.812.938-1.062C7.907 5.75 8 5.5 8 5.25v-1a1.25 1.25 0 112.5 0v.375c0 .5-.5.812-.938 1.062-.469.25-.562.5-.562.75v1z"/>
                                 </svg>
                             </button>
-                            <span class="dm-index">${index + 1}.</span> ${nickname} <span class="dm-username">(${username})</span>
+                            <span class="dm-index">${index + 1}.</span>
+                            ${isGroupDM ? '<span class="channel-type group">Group</span>' : ''}
+                            ${nickname} ${!isGroupDM ? `<span class="dm-username">(${displayName})</span>` : ''}
                         </span>
                         <span class="dm-count">-</span>
                         <span class="dm-toggle">
@@ -328,7 +354,6 @@ class OpenDMsScreen extends BaseScreen {
             }).join('');
 
             this.updateTotalCount(dms.length);
-            // Only set up the DM toggle listeners
             this.setupDMToggleListeners(dmsList.closest('.screen-container'));
             Console.success(`Loaded ${dms.length} DM channels`);
         } catch (error) {
@@ -554,15 +579,36 @@ class OpenDMsScreen extends BaseScreen {
     }
 
     async handleUserInfo(dmRow) {
-        const recipientId = dmRow.dataset.recipientId;
-        const username = dmRow.querySelector('.dm-recipient').textContent.trim();
-        try {
-            const userInfo = await this.api.getUserInfo(recipientId, true);
-            if (userInfo) {
-                Console.printUserInfo(userInfo);
+        const channelId = dmRow.dataset.channelId;
+        const channelData = this.channelData.get(channelId);
+
+        if (!channelData) {
+            Console.error('Channel data not found');
+            return;
+        }
+
+        const isGroupDM = channelData.type === 3; // Discord's type 3 is GROUP_DM
+        
+        if (isGroupDM) {
+            // Format the channel data for group DM display
+            const formattedChannel = {
+                ...channelData,
+                created_at: new Date(Number((BigInt(channelData.id) >> 22n) + 1420070400000n))
+            };
+            Console.printGroupDMInfo(formattedChannel);
+        } else {
+            try {
+                const userInfo = await this.api.getUserInfo(channelData.recipients[0].id, true);
+                if (userInfo) {
+                    Console.printUserInfo(userInfo);
+                }
+            } catch (userError) {
+                // Fallback to getting user info through channel
+                const userInfo = await this.api.getUserInfo(channelId, false);
+                if (userInfo) {
+                    Console.printUserInfo(userInfo);
+                }
             }
-        } catch (error) {
-            Console.error(`Failed to get user info for ${username}: ${error.message}`);
         }
     }
 }

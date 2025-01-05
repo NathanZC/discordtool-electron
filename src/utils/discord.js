@@ -148,7 +148,9 @@ class DiscordAPI {
                 : `/channels/${channelOrGuildId}/messages/search`;
 
             if (isGuild) {
-                params.append('channel_id', channelId);
+                if (channelId) {
+                    params.append('channel_id', channelId);
+                }
                 params.append('include_nsfw', 'true');
             }
 
@@ -684,6 +686,80 @@ class DiscordAPI {
             console.error('Error getting guild info:', error);
             throw error;
         }
+    }
+
+    async getChannelInfo(channelId) {
+        try {
+            const response = await this.makeRequest(`/channels/${channelId}`);
+            
+            if (!response.ok) {
+                throw new Error(`Failed to fetch channel info: ${response.status}`);
+            }
+
+            const channelData = await response.json();
+            
+            // Convert BigInt to Number for creation timestamp
+            const timestamp = Number((BigInt(channelData.id) >> 22n) + 1420070400000n);
+            
+            return {
+                // Basic Info
+                id: channelData.id,
+                type: this.getChannelType(channelData.type),
+                name: channelData.name,
+                topic: channelData.topic,
+                
+                // Guild/Server Info
+                guild_id: channelData.guild_id,
+                position: channelData.position,
+                
+                // Permission Info
+                permission_overwrites: channelData.permission_overwrites,
+                
+                // Channel Settings
+                nsfw: channelData.nsfw,
+                rate_limit_per_user: channelData.rate_limit_per_user,
+                
+                // Parent Category
+                parent_id: channelData.parent_id,
+                
+                // Timestamps
+                created_at: new Date(timestamp),
+                last_message_id: channelData.last_message_id,
+                
+                // Thread specific (if applicable)
+                thread_metadata: channelData.thread_metadata,
+                member_count: channelData.member_count,
+                message_count: channelData.message_count,
+                
+                // Voice specific (if applicable)
+                bitrate: channelData.bitrate,
+                user_limit: channelData.user_limit,
+                rtc_region: channelData.rtc_region
+            };
+        } catch (error) {
+            console.error('Error getting channel info:', error);
+            throw error;
+        }
+    }
+
+    // Helper method to convert channel type numbers to readable strings
+    getChannelType(type) {
+        const types = {
+            0: 'GUILD_TEXT',
+            1: 'DM',
+            2: 'GUILD_VOICE',
+            3: 'GROUP_DM',
+            4: 'GUILD_CATEGORY',
+            5: 'GUILD_ANNOUNCEMENT',
+            10: 'ANNOUNCEMENT_THREAD',
+            11: 'PUBLIC_THREAD',
+            12: 'PRIVATE_THREAD',
+            13: 'GUILD_STAGE_VOICE',
+            14: 'GUILD_DIRECTORY',
+            15: 'GUILD_FORUM',
+            16: 'GUILD_MEDIA'
+        };
+        return types[type] || 'UNKNOWN';
     }
 
 }

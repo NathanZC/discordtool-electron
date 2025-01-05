@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, MenuItem } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
 
@@ -24,6 +24,42 @@ function createWindow() {
             `
         }
     });
+
+    // Create context menu
+    win.webContents.on('context-menu', (event, params) => {
+        const menu = new Menu();
+
+        // Only show these items when right clicking on an image
+        if (params.mediaType === 'image') {
+            menu.append(new MenuItem({
+                label: 'Copy Image',
+                click: () => {
+                    win.webContents.copyImageAt(params.x, params.y);
+                }
+            }));
+            menu.append(new MenuItem({
+                label: 'Copy Image URL',
+                click: () => {
+                    win.webContents.send('copy-url', params.srcURL);
+                }
+            }));
+            menu.append(new MenuItem({ type: 'separator' }));
+            menu.append(new MenuItem({
+                label: 'Save Image As...',
+                click: () => {
+                    win.webContents.downloadURL(params.srcURL);
+                }
+            }));
+            menu.append(new MenuItem({
+                label: 'Open Image in Browser',
+                click: () => {
+                    require('electron').shell.openExternal(params.srcURL);
+                }
+            }));
+            menu.popup();
+        }
+    });
+
     // do this when done
     // win.setMenu(null);
     win.loadFile('index.html');

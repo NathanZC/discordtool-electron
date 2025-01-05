@@ -12,6 +12,7 @@ class Navigation {
         this.userId = userId;
         this.userData = userData;
         this.currentScreen = null;
+        this.currentScreenInstance = null;
         this.menuItems = [
             { id: 'open-dms', label: 'Open DMs', icon: '💬' },
             { id: 'servers', label: 'Accessible Servers', icon: '🖥️' },
@@ -120,6 +121,14 @@ class Navigation {
     }
 
     navigateTo(screen) {
+        // Add check for running operations
+        if (this.currentScreenInstance && 
+            typeof this.currentScreenInstance.isOperationInProgress === 'function' && 
+            this.currentScreenInstance.isOperationInProgress()) {
+            Console.warn('Please stop the current operation before navigating away');
+            return;
+        }
+
         const mainContent = document.getElementById('main-content');
         
         if (screen === 'logout') {
@@ -137,8 +146,8 @@ class Navigation {
         switch(screen) {
             case 'open-dms':
                 Console.show();
-                const openDMsScreen = new OpenDMsScreen(this.token, this.userId);
-                openDMsScreen.render(mainContent);
+                this.currentScreenInstance = new OpenDMsScreen(this.token, this.userId);
+                this.currentScreenInstance.render(mainContent);
                 break;
             case 'servers':
                 Console.show();
