@@ -9,7 +9,7 @@ function createWindow() {
     global.appPath = app.getAppPath();
     
     const win = new BrowserWindow({
-        width: 1600,
+        width: 1800,
         height: 1200,
         webPreferences: {
             nodeIntegration: true,

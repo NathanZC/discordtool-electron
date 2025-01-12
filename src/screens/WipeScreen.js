@@ -262,8 +262,15 @@ class WipeScreen extends BaseScreen {
                 const lockMatches = (channelState.locked && activeFilters.includes('locked')) || 
                                   (!channelState.locked && activeFilters.includes('unlocked'));
                 
-                // Must match both type and lock filters
-                return matchesSearch && typeMatches && lockMatches;
+                // Updated state filter logic to match button data-filter attributes
+                const stateMatches = (
+                    (channelState.state === WipeScreen.CHANNEL_STATES.COMPLETE && activeFilters.includes('complete')) ||
+                    (channelState.state === WipeScreen.CHANNEL_STATES.UNABLE && activeFilters.includes('error')) ||
+                    (channelState.state === WipeScreen.CHANNEL_STATES.INCOMPLETE && activeFilters.includes('incomplete'))
+                );
+                
+                // Must match all active filters
+                return matchesSearch && typeMatches && lockMatches && stateMatches;
             });
 
         if (filteredChannels.length === 0) {
@@ -344,7 +351,10 @@ class WipeScreen extends BaseScreen {
                 server: true,
                 dm: true,
                 locked: true,
-                unlocked: true
+                unlocked: true,
+                complete: true,
+                error: true,
+                incomplete: true
             };
             
             // Only override defaults if existing buttons are found
@@ -357,15 +367,24 @@ class WipeScreen extends BaseScreen {
             // Update the text content
             totalChannels.innerHTML = `Total: ${count} Channel${count !== 1 ? 's' : ''}`;
             
-            // Create filter buttons
+            // Create filter buttons with corrected data-filter attributes
             const newFilterButtons = document.createElement('div');
             newFilterButtons.className = 'filter-buttons';
             newFilterButtons.innerHTML = `
                 <button class="reset-states-btn" title="Reset all channel states">Reset States</button>
-                <button class="filter-btn ${filterStates.server ? 'active' : ''}" data-filter="server">Servers</button>
-                <button class="filter-btn ${filterStates.dm ? 'active' : ''}" data-filter="dm">DMs</button>
-                <button class="filter-btn ${filterStates.locked ? 'active' : ''}" data-filter="locked">Locked</button>
-                <button class="filter-btn ${filterStates.unlocked ? 'active' : ''}" data-filter="unlocked">Unlocked</button>
+                <div class="filter-section">
+                    <button class="filter-btn ${filterStates.server ? 'active' : ''}" data-filter="server">Servers</button>
+                    <button class="filter-btn ${filterStates.dm ? 'active' : ''}" data-filter="dm">DMs</button>
+                </div>
+                <div class="filter-section">
+                    <button class="filter-btn ${filterStates.locked ? 'active' : ''}" data-filter="locked">Locked</button>
+                    <button class="filter-btn ${filterStates.unlocked ? 'active' : ''}" data-filter="unlocked">Unlocked</button>
+                </div>
+                <div class="filter-section">
+                    <button class="filter-btn ${filterStates.complete ? 'active' : ''}" data-filter="complete">Completed</button>
+                    <button class="filter-btn ${filterStates.error ? 'active' : ''}" data-filter="error">Error</button>
+                    <button class="filter-btn ${filterStates.incomplete ? 'active' : ''}" data-filter="incomplete">Incomplete</button>
+                </div>
             `;
             totalChannels.appendChild(newFilterButtons);
             

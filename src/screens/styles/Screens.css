@@ -2438,3 +2438,24 @@ code {
     background-color: #7289da;
     color: white;
 }
+
+.filter-section {
+    display: inline-block;
+    padding: 0 10px;
+    border-right: 1px solid #666;
+}
+
+.filter-section:last-child {
+    border-right: none;
+}
+
+.filter-buttons {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.reset-states-btn {
+    margin-right: 10px;
+}
