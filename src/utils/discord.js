@@ -239,20 +239,20 @@ class DiscordAPI {
 
                 console.log("Search result:", searchResult ? "found messages" : "no messages found");
 
-                if (stuckCount > 5) {
-                    Console.warn(`Seems like we are stuck, restarting deletion for the current ${isGuild ? 'server' : 'DM'}`);
-                    break;
-                }
-
                 if (!searchResult) {
                     if (!isRunning()) return stopDeletion();
                     await new Promise(resolve => setTimeout(resolve, 10000));
                     Console.warn(`No messages found, attempt: ${stuckCount}`);
                     stuckCount++;
+                    if (stuckCount > 5) {
+                        Console.error(`Seems like we are stuck, exiting deletion for the current ${isGuild ? 'server' : 'DM'}`);
+                        break;
+                    }
                     continue;
                 }
 
                 const { messages, totalResults } = searchResult;
+                // Reset stuck count when we find messages
                 if (page === 1) {
                     total = totalResults;
                     Console.log(`Found ${total} messages to process`);
@@ -283,8 +283,16 @@ class DiscordAPI {
                         if (!isRunning()) return stopDeletion();
                         await new Promise(resolve => setTimeout(resolve, deleteDelay() * 3 + 10000));
                         stuckCount++;
+                        if (stuckCount > 5) {
+                            Console.error(`Seems like we are stuck, exiting deletion for the current ${isGuild ? 'server' : 'DM'}`);
+                            break;
+                        }
                         continue;
                     }
+                } else {
+                    // Reset stuck count when we find new messages to delete
+                    console.log("Resetting stuck count");
+                    stuckCount = 0;
                 }
 
                 for (const message of toDelete) {
