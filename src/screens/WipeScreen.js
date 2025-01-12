@@ -164,7 +164,7 @@ class WipeScreen extends BaseScreen {
                                 </button>
                             </div>
                             <div class="search-container compact-search">
-                                <input type="text" id="channelSearch" placeholder="Search channels..." class="dm-search">
+                                <input type="text" id="channelSearch" placeholder="Search channels... (name or channel ID)" class="dm-search">
                             </div>
                             <span class="message-count-header compact-header">Message Count</span>
                             <span class="actions-header compact-header">Actions</span>
@@ -249,8 +249,9 @@ class WipeScreen extends BaseScreen {
 
         const filteredChannels = Array.from(this.channels.entries())
             .filter(([channelId, channelName]) => {
-                // Apply search filter
-                const matchesSearch = channelName.toLowerCase().includes(searchTerm);
+                // Apply search filter - now checks both name and ID
+                const matchesSearch = channelName.toLowerCase().includes(searchTerm) || 
+                                    channelId.toLowerCase().includes(searchTerm);
                 
                 // Check type filters (server/dm)
                 const isDM = channelName.startsWith('Direct Message with');
@@ -737,12 +738,24 @@ class WipeScreen extends BaseScreen {
             if (total > 0 && current < total) {
                 const timePerOperation = (delaySlider ? parseFloat(delaySlider.value) : 1);
                 const remainingOperations = total - current;
-                const remainingSeconds = remainingOperations * timePerOperation;
-                const minutes = Math.floor(remainingSeconds / 60);
+                
+                // Calculate extra time for rate limiting (28 seconds per 15 operations)
+                const rateLimitDelay = Math.floor(remainingOperations / 15) * 28;
+                
+                // Calculate total remaining seconds including rate limit delays
+                const remainingSeconds = (remainingOperations * timePerOperation) + rateLimitDelay;
+                
+                // Convert to hours, minutes, seconds
+                const hours = Math.floor(remainingSeconds / 3600);
+                const minutes = Math.floor((remainingSeconds % 3600) / 60);
                 const seconds = Math.floor(remainingSeconds % 60);
                 
                 if (estimatedTime) {
-                    estimatedTime.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    if (hours > 0) {
+                        estimatedTime.textContent = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    } else {
+                        estimatedTime.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    }
                 }
             } else {
                 if (estimatedTime) {

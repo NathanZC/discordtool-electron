@@ -189,6 +189,17 @@ class DiscordAPI {
         }
     }
 
+    async cacheAttachment(url) {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            return URL.createObjectURL(blob);
+        } catch (error) {
+            console.error(`Failed to cache attachment: ${error}`);
+            return null;
+        }
+    }
+
     async deleteChannelMessages({
         channelOrGuildId, 
         channelName, 
@@ -261,21 +272,86 @@ class DiscordAPI {
                 const toDelete = [];
                 const lastOffset = offset;
 
-                for (const message of messages) {
-                    if (!seen.has(message.id)) {
-                        if (message.type === 0 || (message.type >= 6 && message.type <= 21)) {
-                            toDelete.push({
-                                id: message.id,
-                                content: message.content,
-                                channelId: message.channel_id
-                            });
-                        } else {
-                            Console.log("Skipping message because not deletable");
-                            seen.add(message.id);
-                            offset++;
+                // Get checkbox state from Console
+                const shouldCacheAttachments = document.getElementById('cacheAttachments')?.checked;
+
+                // First, collect all messages and count total attachments
+                const messagesToProcess = messages.filter(message => 
+                    !seen.has(message.id) && 
+                    (message.type === 0 || (message.type >= 6 && message.type <= 21))
+                );
+
+                // Add handling for non-deletable messages
+                messages.forEach(message => {
+                    if (!seen.has(message.id) && !(message.type === 0 || (message.type >= 6 && message.type <= 21))) {
+                        Console.log(`Skipping non-deletable message type ${message.type}`);
+                        seen.add(message.id);
+                        offset++;
+                        deleteMessagesCount++; // Increment counter for skipped messages
+                        if (onProgress) {
+                            onProgress(deleteMessagesCount, total);
                         }
                     }
+                });
+
+                // Calculate total attachments to cache
+                const totalAttachments = shouldCacheAttachments ? 
+                    messagesToProcess.reduce((sum, msg) => sum + (msg.attachments?.length || 0), 0) : 0;
+
+                let cachedCount = 0;
+                let progressMessage = null;
+
+                // Process each message
+                for (const message of messagesToProcess) {
+                    let cachedAttachments = [];
+                    
+                    // Handle attachments if they exist
+                    if (message.attachments && message.attachments.length > 0) {
+                        if (shouldCacheAttachments) {
+                            if (totalAttachments > 0 && !progressMessage) {
+                                Console.log(`Caching ${totalAttachments} total attachments...`);
+                                progressMessage = Console.progress(`Caching Progress: [${this.createProgressBar(0)}] 0% (0/${totalAttachments})`);
+                            }
+
+                            for (const attachment of message.attachments) {
+                                const cachedUrl = await this.cacheAttachment(attachment.url);
+                                if (cachedUrl) {
+                                    cachedAttachments.push({
+                                        ...attachment,
+                                        url: cachedUrl
+                                    });
+                                    cachedCount++;
+                                    
+                                    // Update progress in-line
+                                    const progress = Math.floor((cachedCount / totalAttachments) * 100);
+                                    const progressText = `Caching Progress: [${this.createProgressBar(progress)}] ${progress}% (${cachedCount}/${totalAttachments})`;
+                                    Console.updateProgress(progressMessage, progressText);
+                                }
+                            }
+                        } else {
+                            // If caching is disabled, just store the original attachments
+                            cachedAttachments = message.attachments;
+                        }
+                    }
+
+                    toDelete.push({
+                        id: message.id,
+                        content: message.content,
+                        channelId: message.channel_id,
+                        attachments: cachedAttachments
+                    });
                 }
+
+                // Clear the progress message if it exists
+                if (progressMessage) {
+                    Console.clearProgress(progressMessage);
+                    Console.log('Caching complete!');
+                }
+
+                // Update seen messages and offset
+                messagesToProcess.forEach(message => {
+                    seen.add(message.id);
+                });
 
                 if (toDelete.length === 0 && offset === lastOffset) {
                     if (total > 0 && seen.size < total) {
@@ -308,7 +384,20 @@ class DiscordAPI {
                         if (deleted) {
                             deleteMessagesCount++;
                             seen.add(message.id);
-                            Console.delete(`${channelName}: Deleted message: ${message.content}`);
+                            
+                            // Create base message text
+                            let messageText = `${channelName}: Deleted message: ${message.content}`;
+                            
+                            // Add attachments if they exist
+                            if (message.attachments && message.attachments.length > 0) {
+                                messageText += '\nAttachments:';
+                                message.attachments.forEach(attachment => {
+                                    messageText += `\n- ${attachment.filename}`;
+                                });
+                            }
+                            console.log('message: ', message)
+                            Console.delete(messageText, message.attachments);
+                            
                             if (onProgress) {
                                 onProgress(deleteMessagesCount, total);
                             }
@@ -763,6 +852,14 @@ class DiscordAPI {
             16: 'GUILD_MEDIA'
         };
         return types[type] || 'UNKNOWN';
+    }
+
+    // Add this helper method to create the progress bar
+    createProgressBar(percentage) {
+        const width = 20;
+        const filled = Math.floor(width * (percentage / 100));
+        const empty = width - filled;
+        return '█'.repeat(filled) + '░'.repeat(empty);
     }
 
 }

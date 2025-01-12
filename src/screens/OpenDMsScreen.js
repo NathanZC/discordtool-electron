@@ -101,7 +101,7 @@ class OpenDMsScreen extends BaseScreen {
                             </button>
                         </div>
                         <div class="search-container">
-                            <input type="text" id="dmSearch" placeholder="Search DMs..." class="dm-search">
+                            <input type="text" id="dmSearch" placeholder="Search DMs... (name, channel ID, or user ID)" class="dm-search">
                         </div>
                         <span>Message Count</span>
                         <div class="toggle-header">
@@ -248,7 +248,12 @@ class OpenDMsScreen extends BaseScreen {
 
             dmRows.forEach(row => {
                 const recipient = row.querySelector('.dm-recipient').textContent.toLowerCase();
-                if (recipient.includes(searchTerm)) {
+                const channelId = row.dataset.channelId.toLowerCase();
+                const recipientId = row.dataset.recipientId?.toLowerCase() || '';  // Add null check
+                
+                if (recipient.includes(searchTerm) || 
+                    channelId.includes(searchTerm) || 
+                    recipientId.includes(searchTerm)) {
                     row.style.display = '';
                     visibleCount++;
                 } else {

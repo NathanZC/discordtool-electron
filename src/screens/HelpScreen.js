@@ -21,6 +21,17 @@ class HelpScreen extends BaseScreen {
                             <li>Locate the <code>messages/index.json</code> file</li>
                         </ol>
                         <p class="note">This file is required for the "Find Closed DMs" and "Message Wiper" features</p>
+                        <p class="tip">Tip: Only select "Messages" when requesting data for fastest processing. Other data will increase processing time.</p>
+                    </section>
+
+                    <section class="help-section important-notice">
+                        <h2>Important: Channel Indexing</h2>
+                        <p>For best results when deleting messages:</p>
+                        <ul class="feature-list">
+                            <li>Wait at least 2-3 minutes after sending messages in a channel before running deletion operations on that channel</li>
+                            <li>If you stop a deletion operation, wait a few minutes before restarting it on the same channel</li>
+                        </ul>
+                        <p class="note">Discord needs time to properly index messages. Running deletions too quickly after sending messages or between operations may result in incomplete deletion (missed messages or infinite retry loops).</p>
                     </section>
 
                     <section class="help-section">

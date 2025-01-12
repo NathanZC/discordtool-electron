@@ -6,13 +6,27 @@ class Console {
         if (!consoleContent) return;
 
         consoleContent.innerHTML = `
-            <h2>Console</h2>
-            <div class="console-section"
+            <div class="console-header">
+                <h2>Console</h2>
+                <div class="console-settings">
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="cacheAttachments">
+                        <span class="checkbox-label">Cache & show deleted files</span>
+                    </label>
+                </div>
+            </div>
+            <div class="console-section">
                 <div class="console-output" id="consoleOutput">
                     <!-- Console messages will appear here -->
                 </div>
             </div>
         `;
+
+        // Initialize checkbox state
+        const cacheAttachmentsCheckbox = document.getElementById('cacheAttachments');
+        if (cacheAttachmentsCheckbox) {
+            cacheAttachmentsCheckbox.checked = false;
+        }
     }
 
     static show() {
@@ -71,8 +85,93 @@ class Console {
         this.log(message, 'warning');
     }
 
-    static delete(message) {
-        this.log(message, 'delete');
+    static delete(message, attachments = []) {
+        const consoleOutput = document.getElementById('consoleOutput');
+        const cacheAttachmentsCheckbox = document.getElementById('cacheAttachments');
+        if (!consoleOutput) return;
+
+        const logEntry = document.createElement('div');
+        logEntry.className = 'console-entry delete';
+        
+        // Add timestamp and message text
+        const messageText = document.createElement('div');
+        messageText.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        messageText.style.whiteSpace = 'pre-wrap';
+        messageText.style.wordBreak = 'break-word';
+        logEntry.appendChild(messageText);
+
+        // Only process attachments if caching is enabled
+        if (cacheAttachmentsCheckbox?.checked && attachments && attachments.length > 0) {
+            const attachmentsContainer = document.createElement('div');
+            attachmentsContainer.className = 'attachments-container';
+            
+            attachments.forEach(attachment => {
+                // Handle images
+                if (attachment.content_type?.startsWith('image/')) {
+                    const img = document.createElement('img');
+                    img.src = attachment.url;
+                    img.alt = attachment.filename;
+                    img.className = 'console-attachment-image';
+                    img.style.maxWidth = '200px';
+                    img.style.maxHeight = '200px';
+                    img.style.margin = '5px';
+                    img.onclick = () => ipcRenderer.send('copy-url', attachment.url);
+                    
+                    // Clean up blob URL after image loads
+                    img.onload = () => {
+                        if (attachment.url.startsWith('blob:')) {
+                            // Give some extra time for the image to be rendered
+                            setTimeout(() => URL.revokeObjectURL(attachment.url), 1000);
+                        }
+                    };
+                    
+                    attachmentsContainer.appendChild(img);
+                } 
+                // Handle other files
+                else {
+                    const fileLink = document.createElement('a');
+                    fileLink.href = attachment.url;
+                    fileLink.className = 'console-attachment-file';
+                    fileLink.textContent = `📎 ${attachment.filename} (${this.formatFileSize(attachment.size)})`;
+                    fileLink.download = attachment.filename;
+                    fileLink.onclick = async (e) => {
+                        e.preventDefault();
+                        
+                        try {
+                            // Send message to main process to handle the download
+                            ipcRenderer.send('download-file', {
+                                url: attachment.url,
+                                filename: attachment.filename
+                            });
+                            
+                            // Clean up blob URL after initiating download
+                            if (attachment.url.startsWith('blob:')) {
+                                setTimeout(() => URL.revokeObjectURL(attachment.url), 1000);
+                            }
+                        } catch (error) {
+                            console.error('Download failed:', error);
+                            Console.error(`Failed to download ${attachment.filename}`);
+                        }
+                    };
+                    attachmentsContainer.appendChild(fileLink);
+                    attachmentsContainer.appendChild(document.createElement('br'));
+                }
+            });
+            
+            logEntry.appendChild(attachmentsContainer);
+        }
+
+        consoleOutput.appendChild(logEntry);
+        this.scrollToBottom(consoleOutput);
+    }
+
+    // Helper method to format file sizes
+    static formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
     static printUserInfo(userInfo) {
@@ -401,10 +500,58 @@ class Console {
         consoleOutput.appendChild(infoBlock);
         this.scrollToBottom(consoleOutput);
     }
+
+    static clearCache() {
+        const consoleOutput = document.getElementById('consoleOutput');
+        if (!consoleOutput) return;
+
+        // Clean up any blob URLs from images
+        const images = consoleOutput.querySelectorAll('img[src^="blob:"]');
+        images.forEach(img => {
+            if (img.src.startsWith('blob:')) {
+                URL.revokeObjectURL(img.src);
+            }
+        });
+
+        // Reset cache checkbox
+        const cacheAttachmentsCheckbox = document.getElementById('cacheAttachments');
+        if (cacheAttachmentsCheckbox) {
+            cacheAttachmentsCheckbox.checked = false;
+        }
+    }
+
+    static progress(message) {
+        const consoleOutput = document.getElementById('consoleOutput');
+        if (!consoleOutput) return null;
+
+        const progressEntry = document.createElement('div');
+        progressEntry.className = 'console-entry progress';
+        progressEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        consoleOutput.appendChild(progressEntry);
+        this.scrollToBottom(consoleOutput);
+        
+        return progressEntry;
+    }
+
+    static updateProgress(progressEntry, message) {
+        if (progressEntry) {
+            progressEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        }
+    }
+
+    static clearProgress(progressEntry) {
+        if (progressEntry && progressEntry.parentNode) {
+            progressEntry.parentNode.removeChild(progressEntry);
+        }
+    }
 }
 
 ipcRenderer.on('copy-url', (event, url) => {
     require('electron').clipboard.writeText(url);
+});
+
+ipcRenderer.on('window-close', () => {
+    Console.clearCache();
 });
 
 module.exports = Console; 

@@ -136,7 +136,7 @@ class ClosedDMsScreen extends BaseScreen {
                                 </button>
                             </div>
                             <div class="search-container closed-dm-search">
-                                <input type="text" id="dmSearch" placeholder="Search DMs..." class="dm-search">
+                                <input type="text" id="dmSearch" placeholder="Search DMs... (name or channel ID)" class="dm-search">
                             </div>
                             <span class="closed-dm-count">Message Count</span>
                             <span class="closed-dm-action">Open Dm</span>
@@ -369,7 +369,8 @@ class ClosedDMsScreen extends BaseScreen {
 
             dmRows.forEach(row => {
                 const recipient = row.querySelector('.dm-recipient').textContent.toLowerCase();
-                const isVisible = recipient.includes(searchTerm);
+                const channelId = row.dataset.channelId;
+                const isVisible = recipient.includes(searchTerm) || channelId.includes(searchTerm);
                 row.style.display = isVisible ? '' : 'none';
                 if (isVisible) {
                     // Update the index for visible rows

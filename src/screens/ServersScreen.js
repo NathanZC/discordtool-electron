@@ -113,7 +113,7 @@ class ServersScreen extends BaseScreen {
                             </button>
                         </div>
                         <div class="search-container">
-                            <input type="text" id="serverSearch" placeholder="Search Servers..." class="dm-search">
+                            <input type="text" id="serverSearch" placeholder="Search Servers... (name or server ID)" class="dm-search">
                         </div>
                         <span>Message Count</span>
                         <div class="toggle-header">
@@ -293,7 +293,8 @@ class ServersScreen extends BaseScreen {
 
             serverRows.forEach(row => {
                 const serverName = row.querySelector('.dm-recipient').textContent.toLowerCase();
-                if (serverName.includes(searchTerm)) {
+                const serverId = row.dataset.serverId;
+                if (serverName.includes(searchTerm) || serverId.includes(searchTerm)) {
                     row.style.display = '';
                     visibleCount++;
                 } else {

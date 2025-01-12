@@ -117,3 +117,137 @@
 .copy-link-btn:hover {
     color: #5b6eae;
 }
+
+.attachments-container {
+    margin-top: 5px;
+    margin-left: 20px;
+}
+
+.console-attachment-image {
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.console-attachment-image:hover {
+    transform: scale(1.05);
+}
+
+.console-attachment-file {
+    color: #00b0f4;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.console-attachment-file:hover {
+    text-decoration: underline;
+}
+
+.console-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.console-settings {
+    display: flex;
+    align-items: center;
+}
+
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 4px;
+    background: rgba(114, 137, 218, 0.15);
+    transition: all 0.2s ease;
+    position: relative;
+    border: 1px solid rgba(114, 137, 218, 0.3);
+    font-weight: 500;
+}
+
+.checkbox-container:hover {
+    background: rgba(114, 137, 218, 0.25);
+    border-color: rgba(114, 137, 218, 0.5);
+    transform: translateY(-1px);
+}
+
+.checkbox-container:active {
+    transform: translateY(0px);
+}
+
+.checkbox-container input[type="checkbox"] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+    accent-color: #7289DA;
+    position: relative;
+    border-radius: 3px;
+    margin: 0;
+}
+
+.checkbox-container input[type="checkbox"]:checked {
+    background-color: #7289DA;
+    border-color: #7289DA;
+}
+
+.checkbox-label {
+    user-select: none;
+    letter-spacing: 0.2px;
+    color: #dcddde;
+}
+
+.checkbox-container:hover .checkbox-label {
+    color: #ffffff;
+}
+
+/* Add tooltip styles */
+.checkbox-container::after {
+    content: "When enabled, deleted files and images will be cached locally and displayed in the console. Click attachments to copy or download them. (This will be slower but allow you to download attachments incase you delete them by mistake. Cache will cleared on app close)";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 8px;
+    padding: 8px;
+    background: #18191c;
+    border-radius: 4px;
+    font-size: 12px;
+    width: max-content;
+    max-width: 250px;
+    color: #fff;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(114, 137, 218, 0.2);
+    pointer-events: none;
+    z-index: 1000;
+}
+
+.checkbox-container::before {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-bottom-color: #18191c;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+}
+
+.checkbox-container:hover::after {
+    opacity: 1;
+    visibility: visible;
+}
+
+.checkbox-container:hover::before {
+    opacity: 1;
+    visibility: visible;
+}
