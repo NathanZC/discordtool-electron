@@ -5,6 +5,7 @@ const ClosedDMsScreen = require('../screens/ClosedDMsScreen');
 const WipeScreen = require('../screens/WipeScreen');
 const HelpScreen = require('../screens/HelpScreen');
 const Console = require('./Console');
+const MediaViewerScreen = require('../screens/MediaViewerScreen');
 
 class Navigation {
     constructor(token, userId, userData) {
@@ -17,6 +18,7 @@ class Navigation {
             { id: 'open-dms', label: 'Open DMs', icon: '💬' },
             { id: 'servers', label: 'Accessible Servers', icon: '🖥️' },
             { id: 'closed-dms', label: 'Find Closed DMs', icon: '🔍' },
+            // { id: 'media-viewer', label: 'Media Viewer', icon: '🖼️' },
             { id: 'wipe', label: 'Wipe Account', icon: '🗑️' },
             { id: 'help', label: 'How to Use', icon: '❔' },
         ];
@@ -159,6 +161,11 @@ class Navigation {
             case 'closed-dms':
                 Console.show();
                 this.currentScreenInstance = new ClosedDMsScreen(this.token, this.userId);
+                this.currentScreenInstance.render(mainContent);
+                break;
+            case 'media-viewer':
+                Console.show();
+                this.currentScreenInstance = new MediaViewerScreen(this.token, this.userId);
                 this.currentScreenInstance.render(mainContent);
                 break;
             case 'wipe':
