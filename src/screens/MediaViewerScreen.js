@@ -2,22 +2,31 @@ const BaseScreen = require('./BaseScreen');
 const Console = require('../components/Console');
 const DiscordAPI = require('../utils/discord');
 const Store = require('electron-store');
+const { dialog } = require('@electron/remote');
 
 class MediaViewerScreen extends BaseScreen {
     constructor(token, userId) {
         super(token);
         this.api = new DiscordAPI(token, userId);
+        this.store = new Store();
+        
+        // Debug log to check stored value
+        const storedAutoplay = this.store.get('autoplayVideos', false);
+        Console.log(`Loading stored autoplay state: ${storedAutoplay}`);
+        
         this.selectedChannel = null;
         this.mediaList = [];
         this.currentIndex = 0;
-        this.saveLocation = null;
+        this.saveLocation = this.loadSaveLocationSetting();
         this.mediaTypes = {
             images: true,
             videos: true,
             gifs: true
         };
-        this.autoplayVideos = true;
-        this.store = new Store();
+        
+        // Load autoplay state from store, default to false if not set
+        this.autoplayVideos = storedAutoplay;
+        
         this.videoVolume = this.loadVolumeSetting();
         this.currentOffset = 0;
         this.hasMoreMedia = true;
@@ -28,6 +37,60 @@ class MediaViewerScreen extends BaseScreen {
         this.preloadingIndexes = new Set();
         this.initialMediaList = [];
         this.autoplayDelay = this.loadAutoplayDelaySetting();
+        this.lastFetchTime = 0;
+        this.FETCH_COOLDOWN = 1000;
+        this.savedFiles = [];
+
+        // Add IPC listener for download progress
+        const { ipcRenderer } = require('electron');
+        ipcRenderer.on('download-progress', (event, { message, type }) => {
+            if (type === 'success') {
+                Console.success(message);
+            } else if (type === 'error') {
+                Console.error(message);
+            }
+        });
+
+        // Add IPC listeners for console messages
+        let progressEntry = null;
+
+        ipcRenderer.on('log-to-console', (event, { message, type }) => {
+            Console.log(message, type);
+        });
+
+        ipcRenderer.on('create-progress', (event, { message }) => {
+            progressEntry = Console.progress(message);
+        });
+
+        ipcRenderer.on('update-progress', (event, { message }) => {
+            if (progressEntry) {
+                Console.updateProgress(progressEntry, message);
+            }
+        });
+
+        ipcRenderer.on('clear-progress', () => {
+            if (progressEntry) {
+                Console.clearProgress(progressEntry);
+                progressEntry = null;
+            }
+        });
+
+        // Add window close listener
+        ipcRenderer.on('window-close', () => {
+            this.cleanup();
+        });
+
+        // Clean up any existing cache
+        document.querySelectorAll('img[src^="blob:"], video[src^="blob:"]').forEach(element => {
+            if (element.src) {
+                URL.revokeObjectURL(element.src);
+            }
+            if (element instanceof HTMLVideoElement) {
+                element.pause();
+                element.src = '';
+                element.load();
+            }
+        });
     }
 
     // Load volume from store
@@ -41,11 +104,35 @@ class MediaViewerScreen extends BaseScreen {
     }
 
     loadAutoplayDelaySetting() {
-        return this.store.get('mediaViewer.autoplayDelay', 3); // Default to 3 seconds
+        return this.store.get('mediaViewer.autoplayDelay', 3.0); // Default to 3.0 seconds
     }
 
     saveAutoplayDelaySetting(delay) {
         this.store.set('mediaViewer.autoplayDelay', delay);
+    }
+
+    loadSaveLocationSetting() {
+        const userKey = `mediaViewer.saveLocation.${this.api.userId}`;
+        return this.store.get(userKey, null);
+    }
+
+    saveSaveLocationSetting(location) {
+        const userKey = `mediaViewer.saveLocation.${this.api.userId}`;
+        this.store.set(userKey, location);
+    }
+
+    // Add method to save autoplay state
+    saveAutoplayState(state) {
+        this.autoplayVideos = state;
+        this.store.set('autoplayVideos', state);
+        Console.log(`Saving autoplay state: ${state}`); // Debug log
+    }
+
+    // Update toggleAutoplay method if you have one
+    toggleAutoplay() {
+        const newState = !this.autoplayVideos;
+        this.saveAutoplayState(newState);
+        return newState;
     }
 
     render(container) {
@@ -102,14 +189,16 @@ class MediaViewerScreen extends BaseScreen {
                     <span id="channelName"></span>
                 </div>
                 <div class="media-types">
-                    <label><input type="checkbox" id="typeImages" checked> 🖼️ Images</label>
-                    <label><input type="checkbox" id="typeVideos" checked> 🎥 Videos</label>
-                    <label><input type="checkbox" id="typeGifs" checked> 📱 GIFs</label>
+                    <div class="media-type-checkboxes">
+                        <label><input type="checkbox" id="typeImages" checked> 🖼️ Images</label>
+                        <label><input type="checkbox" id="typeVideos" checked> 🎥 Videos</label>
+                        <label><input type="checkbox" id="typeGifs" checked> 📱 GIFs</label>
+                    </div>
                     <div class="autoplay-controls">
-                        <label><input type="checkbox" id="autoplayVideos" checked> ▶️ Autoplay</label>
+                        <label><input type="checkbox" id="autoplayVideos" ${this.autoplayVideos ? 'checked' : ''}> ▶️ Autoplay</label>
                         <div class="delay-control">
                             <span>⏱️</span>
-                            <input type="range" id="autoplayDelay" min="1" max="10" value="${this.autoplayDelay}">
+                            <input type="range" id="autoplayDelay" min="0.2" max="10" step="0.1" value="${this.autoplayDelay}">
                             <span id="delayValue">${this.autoplayDelay}s</span>
                         </div>
                     </div>
@@ -215,7 +304,7 @@ class MediaViewerScreen extends BaseScreen {
         // Add autoplay toggle listener
         const autoplayCheckbox = container.querySelector('#autoplayVideos');
         autoplayCheckbox.addEventListener('change', (e) => {
-            this.autoplayVideos = e.target.checked;
+            this.saveAutoplayState(e.target.checked);
             if (e.target.checked) {
                 this.startAutoplayTimer();
             } else {
@@ -248,10 +337,32 @@ class MediaViewerScreen extends BaseScreen {
         const delayValue = container.querySelector('#delayValue');
         
         delaySlider.addEventListener('input', (e) => {
-            const delay = parseInt(e.target.value);
+            const delay = parseFloat(e.target.value);
             this.autoplayDelay = delay;
             this.saveAutoplayDelaySetting(delay);
             delayValue.textContent = `${delay}s`;
+        });
+
+        // Add save location button listener
+        const saveLocationBtn = container.querySelector('#selectSaveLocation');
+        const currentSaveLocation = container.querySelector('#currentSaveLocation');
+        
+        // Update initial save location display
+        if (this.saveLocation) {
+            currentSaveLocation.textContent = this.saveLocation;
+        }
+
+        saveLocationBtn.addEventListener('click', async () => {
+            const result = await dialog.showOpenDialog({
+                properties: ['openDirectory'],
+                title: 'Select Save Location'
+            });
+
+            if (!result.canceled && result.filePaths.length > 0) {
+                this.saveLocation = result.filePaths[0];
+                this.saveSaveLocationSetting(this.saveLocation);
+                currentSaveLocation.textContent = this.saveLocation;
+            }
         });
     }
 
@@ -944,12 +1055,116 @@ class MediaViewerScreen extends BaseScreen {
             return;
         }
 
-        switch (event.key) {
-            case 'ArrowLeft':
+        switch (event.key.toLowerCase()) {
+            case 'arrowleft':
                 this.navigateMedia(-1);
                 break;
-            case 'ArrowRight':
+            case 'arrowright':
                 this.navigateMedia(1);
+                break;
+            case 'arrowup':
+                // Check if we have a save location and current media
+                if (this.saveLocation && this.mediaList[this.currentIndex]) {
+                    const currentMedia = this.mediaList[this.currentIndex];
+                    const { ipcRenderer } = require('electron');
+                    const { shell } = require('@electron/remote');
+                    const path = require('path');
+                    
+                    const fullPath = path.join(this.saveLocation, currentMedia.filename);
+                    
+                    // Add to saved files stack with the index
+                    this.savedFiles.push({
+                        path: fullPath,
+                        filename: currentMedia.filename,
+                        index: this.currentIndex // Store the index
+                    });
+
+                    // Trigger direct download to save location
+                    ipcRenderer.send('download-file', {
+                        url: currentMedia.url,
+                        filename: currentMedia.filename,
+                        saveLocation: this.saveLocation
+                    });
+                    
+                    // Create message with clickable path
+                    const message = `Saved ${currentMedia.filename} to <span class="clickable-path" style="text-decoration: underline; cursor: pointer;">${this.saveLocation}</span>`;
+                    
+                    // Pass both the message and the click handler
+                    Console.custom(message, 'success', () => {
+                        shell.showItemInFolder(fullPath);
+                    });
+                    
+                    // Navigate to next media
+                    this.navigateMedia(1);
+                } else if (!this.saveLocation) {
+                    Console.error('No save location set. Please set a save location first.');
+                }
+                break;
+            case 'arrowdown':
+                // Undo last save if there are any saved files
+                if (this.savedFiles.length > 0) {
+                    const lastSave = this.savedFiles.pop();
+                    const fs = require('fs');
+                    
+                    try {
+                        // Check if file exists before attempting to delete
+                        if (fs.existsSync(lastSave.path)) {
+                            fs.unlinkSync(lastSave.path);
+                            Console.custom(`Undid save: Deleted ${lastSave.filename}`, 'warning');
+                            
+                            // Navigate back to the undone media's index
+                            if (this.currentIndex !== lastSave.index) {
+                                this.currentIndex = lastSave.index;
+                                this.displayCurrentMedia().catch(err => {
+                                    Console.error(`Error displaying media: ${err.message}`);
+                                });
+                            }
+                        } else {
+                            Console.warn(`File ${lastSave.filename} was already deleted or moved`);
+                        }
+                    } catch (error) {
+                        Console.error(`Failed to delete ${lastSave.filename}: ${error.message}`);
+                        // Push the file back onto the stack if deletion failed
+                        this.savedFiles.push(lastSave);
+                    }
+                } else {
+                    Console.warn('No saved files to undo');
+                }
+                break;
+            case 's':
+                if (this.saveLocation) {
+                    const { ipcRenderer } = require('electron');
+                    let totalToSave = this.mediaList.length;
+                    
+                    Console.custom(`Starting batch save of ${totalToSave} files...`, 'info');
+
+                    // Send all files in a single batch instead of individual downloads
+                    ipcRenderer.send('batch-download-files', {
+                        files: this.mediaList.map(media => ({
+                            url: media.url,
+                            filename: media.filename,
+                            saveLocation: this.saveLocation
+                        }))
+                    });
+
+                    // Add to saved files stack all at once
+                    const path = require('path');
+                    this.savedFiles.push(...this.mediaList.map((media, index) => ({
+                        path: path.join(this.saveLocation, media.filename),
+                        filename: media.filename,
+                        index: index
+                    })));
+
+                    // Create message with clickable path
+                    const message = `Queued ${totalToSave} files to save to <span class="clickable-path" style="text-decoration: underline; cursor: pointer;">${this.saveLocation}</span>`;
+                    
+                    Console.custom(message, 'success', () => {
+                        const { shell } = require('@electron/remote');
+                        shell.openPath(this.saveLocation);
+                    });
+                } else {
+                    Console.error('No save location set. Please set a save location first.');
+                }
                 break;
         }
     }
@@ -974,6 +1189,56 @@ class MediaViewerScreen extends BaseScreen {
             this.autoplayTimer = null;
         }
     }
+
+    // Add cleanup method
+    cleanup() {
+        Console.log('Cleaning up MediaViewer resources...');
+        
+        // Clear autoplay timer
+        this.clearAutoplayTimer();
+        
+        // Clear any playing videos
+        const currentVideo = document.querySelector('#mediaContent video');
+        if (currentVideo) {
+            currentVideo.pause();
+            currentVideo.src = '';
+        }
+        
+        // Clear resize observer
+        if (this.currentResizeObserver) {
+            this.currentResizeObserver.disconnect();
+            this.currentResizeObserver = null;
+        }
+        
+        // Clear media cache more thoroughly
+        for (const [url, element] of this.mediaCache.entries()) {
+            if (element) {
+                if (element instanceof HTMLVideoElement) {
+                    element.pause();
+                    element.src = '';
+                    element.load(); // Force release of media resources
+                }
+                if (element.src && element.src.startsWith('blob:')) {
+                    URL.revokeObjectURL(element.src);
+                }
+            }
+        }
+        this.mediaCache.clear();
+        
+        // Clear any blob URLs that might be in the DOM
+        document.querySelectorAll('img[src^="blob:"], video[src^="blob:"]').forEach(element => {
+            if (element.src) {
+                URL.revokeObjectURL(element.src);
+            }
+            if (element instanceof HTMLVideoElement) {
+                element.pause();
+                element.src = '';
+                element.load();
+            }
+        });
+        
+        Console.success('MediaViewer cleanup completed');
+    }
 }
 
-module.exports = MediaViewerScreen; 
+module.exports = MediaViewerScreen;

@@ -544,6 +544,40 @@ class Console {
             progressEntry.parentNode.removeChild(progressEntry);
         }
     }
+
+    static custom(messageContent, type = 'info', clickHandler = null) {
+        const consoleOutput = document.getElementById('consoleOutput');
+        if (!consoleOutput) return;
+
+        const logEntry = document.createElement('div');
+        logEntry.className = `console-entry ${type}`;
+        
+        // Add timestamp
+        const timestamp = document.createElement('span');
+        timestamp.textContent = `[${new Date().toLocaleTimeString()}] `;
+        logEntry.appendChild(timestamp);
+
+        // If messageContent is a string, create element from HTML
+        if (typeof messageContent === 'string') {
+            const wrapper = document.createElement('span');
+            wrapper.innerHTML = messageContent;
+            
+            // If there's a clickHandler, find clickable elements and attach the handler
+            if (clickHandler) {
+                const clickableElements = wrapper.getElementsByClassName('clickable-path');
+                Array.from(clickableElements).forEach(element => {
+                    element.addEventListener('click', clickHandler);
+                });
+            }
+            
+            logEntry.appendChild(wrapper);
+        } else {
+            logEntry.appendChild(messageContent);
+        }
+
+        consoleOutput.appendChild(logEntry);
+        this.scrollToBottom(consoleOutput);
+    }
 }
 
 ipcRenderer.on('copy-url', (event, url) => {

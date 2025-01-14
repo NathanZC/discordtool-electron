@@ -36,6 +36,7 @@
     ]
   },
   "dependencies": {
+    "@electron/remote": "^2.1.2",
     "electron-dl": "^4.0.0",
     "electron-store": "^8.2.0"
   }

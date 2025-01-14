@@ -166,7 +166,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px 20px;
+    padding: 10px 20px;
     background: #2F3136;
     border-radius: 8px;
     margin-bottom: 20px;
@@ -209,42 +209,40 @@
 }
 
 .media-types {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    padding: 0 15px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px;
+    padding: 4px 15px;
     border-left: 2px solid #40444B;
     border-right: 2px solid #40444B;
 }
 
-.media-types label {
+.media-type-checkboxes {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    color: #dcddde;
-    font-size: 14px;
-    padding: 6px 10px;
-    border-radius: 4px;
-    transition: background-color 0.2s;
+    flex-direction: column;
+    gap: 2px;
 }
 
-.media-types label:hover {
-    background: #40444B;
+.media-types label {
+    padding: 0px 4px;
+    font-size: 12px;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
 }
 
 .media-types input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
+    width: 12px;
+    height: 12px;
+    margin: 0 4px 0 0;
+    flex-shrink: 0;
 }
 
 .volume-control {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #dcddde;
-    font-size: 14px;
 }
 
 .volume-control input[type="range"] {
@@ -256,6 +254,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    max-width: 300px;
 }
 
 .save-location button {
@@ -267,6 +266,7 @@
     cursor: pointer;
     font-size: 14px;
     transition: all 0.2s ease;
+    white-space: nowrap;
 }
 
 .save-location button:hover {
@@ -277,6 +277,15 @@
 .save-location span {
     color: #dcddde;
     font-size: 14px;
+}
+
+#currentSaveLocation {
+    color: #dcddde;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
 }
 
 .media-container {
@@ -461,22 +470,39 @@
     font-style: italic;
 }
 
+/* New container for just the media type checkboxes */
+.media-type-checkboxes {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* Place autoplay controls in middle column */
 .autoplay-controls {
     display: flex;
     flex-direction: column;
+    gap: 4px;
+}
+
+/* Place volume control in last column */
+.volume-control {
+    grid-column: 3;
+    border-left: 2px solid #40444B;
+    padding-left: 15px;
+}
+
+/* Controls container for volume and autoplay */
+.controls-container {
+    display: flex;
+    flex-direction: column;
     gap: 8px;
+    margin-left: auto;
+    border-left: 2px solid #40444B;
+    padding-left: 15px;
 }
 
 .delay-control {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #dcddde;
-    font-size: 14px;
-    padding-left: 24px; /* Align with checkbox */
-}
-
-.delay-control input[type="range"] {
-    width: 80px;
-    cursor: pointer;
 } 

@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, Menu, MenuItem } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
+require('@electron/remote/main').initialize();
 
 // Initialize electron store
 Store.initRenderer();
@@ -11,6 +12,8 @@ function createWindow() {
     const win = new BrowserWindow({
         width: 1800,
         height: 1200,
+        backgroundColor: '#1e1e1e',
+        show: false,
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
@@ -18,6 +21,9 @@ function createWindow() {
             additionalArguments: [`--app-path=${app.getAppPath()}`]
         }
     });
+
+    // Enable remote module for this window
+    require('@electron/remote/main').enable(win.webContents);
 
     // Add this after creating the window
     win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
@@ -73,12 +79,12 @@ function createWindow() {
     });
 
     // Add file download handler
-    ipcMain.on('download-file', async (event, { url, filename }) => {
+    ipcMain.on('download-file', async (event, { url, filename, saveLocation }) => {
         try {
-            const { download } = await import('electron-dl');
-            await download(win, url, {
-                saveAs: true,
-                filename: filename
+            await download(BrowserWindow.getFocusedWindow(), url, {
+                directory: saveLocation,
+                filename: filename,
+                saveAs: false  // Don't show save dialog
             });
         } catch (error) {
             console.error('Download failed:', error);
@@ -88,9 +94,25 @@ function createWindow() {
     // do this when done
     // win.setMenu(null);
     win.loadFile('index.html');
+
+    // Show window when ready
+    win.once('ready-to-show', () => {
+        win.show();
+    });
+
 }
 
 app.whenReady().then(() => {
+    // Configure cache before creating window
+    const session = require('electron').session;
+    session.defaultSession.clearCache()
+        .then(() => {
+            console.log('Initial cache cleared');
+        })
+        .catch(err => {
+            console.error('Error clearing initial cache:', err);
+        });
+
     createWindow();
 
     app.on('activate', () => {
@@ -112,4 +134,83 @@ app.on('window-all-closed', () => {
             app.quit();
         }
     }, 100);
+});
+
+ipcMain.on('batch-download-files', (event, { files }) => {
+    const win = BrowserWindow.getFocusedWindow();
+    if (!win) return;
+
+    let completedDownloads = 0;
+    const totalFiles = files.length;
+
+    // Create initial progress message
+    win.webContents.send('create-progress', {
+        message: `Starting download of ${totalFiles} files...`
+    });
+
+    // Set up download handler
+    win.webContents.session.on('will-download', (event, item, webContents) => {
+        const file = files.find(f => item.getURL() === f.url);
+        if (!file) return;
+
+        const filePath = path.join(file.saveLocation, file.filename);
+        item.setSavePath(filePath);
+
+        item.on('done', (_, state) => {
+            completedDownloads++;
+            
+            if (state === 'completed') {
+                // Update progress
+                win.webContents.send('update-progress', {
+                    message: `Downloading: ${completedDownloads}/${totalFiles} files (${Math.round(completedDownloads/totalFiles * 100)}%)`
+                });
+            } else {
+                win.webContents.send('log-to-console', {
+                    message: `Failed to download: ${file.filename}`,
+                    type: 'error'
+                });
+            }
+
+            // Check if all downloads are complete
+            if (completedDownloads === totalFiles) {
+                win.webContents.send('clear-progress');
+                win.webContents.send('log-to-console', {
+                    message: `Batch download complete! Downloaded ${completedDownloads} files.`,
+                    type: 'success'
+                });
+            }
+        });
+    });
+
+    // Start downloads
+    files.forEach(file => {
+        win.webContents.downloadURL(file.url);
+    });
+});
+
+// Update single file download handler too
+ipcMain.on('download-file', (event, { url, filename, saveLocation }) => {
+    const win = BrowserWindow.getFocusedWindow();
+    if (!win) return;
+
+    win.webContents.session.on('will-download', (event, item, webContents) => {
+        const filePath = path.join(saveLocation, filename);
+        item.setSavePath(filePath);
+
+        item.on('done', (_, state) => {
+            if (state === 'completed') {
+                win.webContents.send('log-to-console', {
+                    message: `Downloaded: ${filename}`,
+                    type: 'success'
+                });
+            } else {
+                win.webContents.send('log-to-console', {
+                    message: `Failed to download: ${filename}`,
+                    type: 'error'
+                });
+            }
+        });
+    });
+
+    win.webContents.downloadURL(url);
 });
