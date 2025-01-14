@@ -1035,18 +1035,14 @@ class DiscordAPI {
         try {
             const params = new URLSearchParams();
             
-            // Add channel_id if provided
             if (channelId) {
                 params.append('channel_id', channelId);
             }
             
-            // Only add the media types that are enabled
-            if (mediaTypes.videos) params.append('has', 'video');
-            if (mediaTypes.images || mediaTypes.gifs) params.append('has', 'image');
-            
+            params.append('content', '');
             params.append('include_nsfw', 'true');
+            params.append('has', 'file');
             
-            // Add offset and limit
             if (offset > 0) params.append('offset', offset.toString());
             if (limit !== 25) params.append('limit', limit.toString());
 
@@ -1113,36 +1109,9 @@ class DiscordAPI {
                         }
                     }
                 }
-
-                // Process embeds if enabled
-                if (mediaTypes.embeds && message.embeds) {
-                    for (const embed of message.embeds) {
-                        if (embed.type === 'image' || embed.type === 'gifv' || 
-                            (embed.image && embed.image.url)) {
-                            mediaItems.push({
-                                type: embed.type === 'gifv' ? 'gif' : 'image',
-                                url: embed.image?.url || embed.url,
-                                filename: embed.title || 'Embed',
-                                messageId: message.id,
-                                timestamp: message.timestamp,
-                                channelId: message.channel_id,
-                                embedData: embed
-                            });
-                        } else if (embed.type === 'video' || embed.video) {
-                            mediaItems.push({
-                                type: 'video',
-                                url: embed.video?.url || embed.url,
-                                filename: embed.title || 'Video Embed',
-                                messageId: message.id,
-                                timestamp: message.timestamp,
-                                channelId: message.channel_id,
-                                embedData: embed
-                            });
-                        }
-                    }
-                }
             }
 
+            Console.log(`Found ${mediaItems.length} media items${channelId ? ' in channel' : ''} (offset: ${offset})`);
             return {
                 media: mediaItems,
                 total: data.total_results,
@@ -1150,41 +1119,8 @@ class DiscordAPI {
                 offset: offset + limit
             };
         } catch (error) {
-            console.error('Error fetching guild media:', error);
+            Console.error('Error in getGuildMedia:', error);
             throw error;
-        }
-    }
-
-    async getMessage(channelId, messageId) {
-        try {
-            // For user accounts, we need to use the search endpoint instead
-            const params = new URLSearchParams({
-                channel_id: channelId,
-                min_id: (BigInt(messageId) - 1n).toString(),
-                max_id: (BigInt(messageId) + 1n).toString(),
-                limit: 1
-            });
-
-            const response = await this.makeRequest(`/channels/${channelId}/messages/search?${params}`);
-            
-            if (!response.ok) {
-                if (response.status === 404 || response.status === 403) {
-                    return null; // Message not found or no access
-                }
-                throw new Error(`Failed to fetch message: ${response.status}`);
-            }
-
-            const data = await response.json();
-            // Find the exact message we're looking for
-            const message = data.messages
-                .flat()
-                .find(msg => msg.id === messageId);
-
-            return message || null;
-
-        } catch (error) {
-            Console.error('Error fetching message:', error);
-            return null;
         }
     }
 

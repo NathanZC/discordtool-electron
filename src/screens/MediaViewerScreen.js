@@ -18,19 +18,16 @@ class MediaViewerScreen extends BaseScreen {
         };
         this.autoplayVideos = true;
         this.store = new Store();
-        this.videoVolume = this.loadVolumeSetting();  // Load saved volume
-        // Add pagination tracking
+        this.videoVolume = this.loadVolumeSetting();
         this.currentOffset = 0;
         this.hasMoreMedia = true;
         this.isLoading = false;
         this.totalResults = 0;
-        // Add cache for media
         this.mediaCache = new Map();
         this.currentResizeObserver = null;
-        // Add tracking for in-progress preloads
         this.preloadingIndexes = new Set();
-        // Add initial media storage
         this.initialMediaList = [];
+        this.autoplayDelay = this.loadAutoplayDelaySetting();
     }
 
     // Load volume from store
@@ -43,10 +40,19 @@ class MediaViewerScreen extends BaseScreen {
         this.store.set('mediaViewer.videoVolume', volume);
     }
 
+    loadAutoplayDelaySetting() {
+        return this.store.get('mediaViewer.autoplayDelay', 3); // Default to 3 seconds
+    }
+
+    saveAutoplayDelaySetting(delay) {
+        this.store.set('mediaViewer.autoplayDelay', delay);
+    }
+
     render(container) {
+        // Initial render with only essential elements
         container.innerHTML = `
             <div class="screen-container media-viewer">
-                <div class="channel-selection ${this.selectedChannel ? 'hidden' : ''}">
+                <div class="channel-selection">
                     <h1>Media Viewer</h1>
                     <div class="source-buttons">
                         <button id="selectDM" class="source-btn">
@@ -64,48 +70,80 @@ class MediaViewerScreen extends BaseScreen {
                         <!-- Channels will be loaded here -->
                     </div>
                 </div>
-
-                <!-- Media Viewer Section -->
-                <div class="media-viewer-content ${!this.selectedChannel ? 'hidden' : ''}">
-                    <div class="media-controls">
-                        <div class="channel-info">
-                            <button id="backToChannels" class="back-btn">← Back</button>
-                            <span id="channelName"></span>
-                        </div>
-                        <div class="media-types">
-                            <label><input type="checkbox" id="typeImages" checked> Images</label>
-                            <label><input type="checkbox" id="typeVideos" checked> Videos</label>
-                            <label><input type="checkbox" id="typeGifs" checked> GIFs</label>
-                            <label><input type="checkbox" id="autoplayVideos" checked> Autoplay Videos</label>
-                            <div class="volume-control">
-                                <label>Volume: </label>
-                                <input type="range" id="videoVolume" min="0" max="100" value="50">
-                                <span id="volumeValue">50%</span>
-                            </div>
-                        </div>
-                        <div class="save-location">
-                            <button id="selectSaveLocation">Set Save Location</button>
-                            <span id="currentSaveLocation">No location selected</span>
-                        </div>
-                    </div>
-
-                    <div class="media-container">
-                        <button id="prevMedia" class="nav-btn">←</button>
-                        <div id="mediaContent" class="media-content">
-                            <!-- Current media will be displayed here -->
-                        </div>
-                        <button id="nextMedia" class="nav-btn">→</button>
-                    </div>
-
-                    <div class="media-info">
-                        <span id="mediaCounter">0/0</span>
-                        <span id="mediaDetails"></span>
-                    </div>
-                </div>
             </div>
         `;
 
-        this.setupEventListeners(container);
+        // Setup initial event listeners
+        container.querySelector('#selectDM').addEventListener('click', () => this.loadChannels('dms'));
+        container.querySelector('#selectServer').addEventListener('click', () => this.loadChannels('servers'));
+        
+        // Add search functionality
+        const searchInput = container.querySelector('#channelSearch');
+        searchInput.addEventListener('input', () => {
+            this.filterChannels(searchInput.value.toLowerCase());
+        });
+
+        // Store container reference for later use
+        this.container = container;
+    }
+
+    // Add a new method to initialize media viewer content when needed
+    initializeMediaViewer() {
+        if (this.container.querySelector('.media-viewer-content')) return;
+
+        const mediaViewerContent = document.createElement('div');
+        mediaViewerContent.className = 'media-viewer-content hidden';
+        mediaViewerContent.innerHTML = `
+            <div class="media-controls">
+                <div class="channel-info">
+                    <button id="backToChannels" class="back-btn">
+                        <span>←</span> Back
+                    </button>
+                    <span id="channelName"></span>
+                </div>
+                <div class="media-types">
+                    <label><input type="checkbox" id="typeImages" checked> 🖼️ Images</label>
+                    <label><input type="checkbox" id="typeVideos" checked> 🎥 Videos</label>
+                    <label><input type="checkbox" id="typeGifs" checked> 📱 GIFs</label>
+                    <div class="autoplay-controls">
+                        <label><input type="checkbox" id="autoplayVideos" checked> ▶️ Autoplay</label>
+                        <div class="delay-control">
+                            <span>⏱️</span>
+                            <input type="range" id="autoplayDelay" min="1" max="10" value="${this.autoplayDelay}">
+                            <span id="delayValue">${this.autoplayDelay}s</span>
+                        </div>
+                    </div>
+                    <div class="volume-control">
+                        <span>🔊</span>
+                        <input type="range" id="videoVolume" min="0" max="100" value="50">
+                        <span id="volumeValue">50%</span>
+                    </div>
+                </div>
+                <div class="save-location">
+                    <button id="selectSaveLocation">📁 Set Save Location</button>
+                    <span id="currentSaveLocation">No location selected</span>
+                </div>
+            </div>
+
+            <div class="media-container">
+                <button id="prevMedia" class="nav-btn">←</button>
+                <div id="mediaContent" class="media-content">
+                    <!-- Current media will be displayed here -->
+                </div>
+                <button id="nextMedia" class="nav-btn">→</button>
+            </div>
+
+            <div class="media-info">
+                <span id="mediaCounter">0/0</span>
+                <span id="mediaDetails"></span>
+            </div>
+        `;
+
+        this.container.querySelector('.screen-container').appendChild(mediaViewerContent);
+        this.setupMediaEventListeners(this.container);
+
+        // Add keyboard navigation
+        document.addEventListener('keydown', this.handleKeyPress.bind(this));
 
         // Add resize listener for window
         window.addEventListener('resize', () => {
@@ -116,11 +154,48 @@ class MediaViewerScreen extends BaseScreen {
         });
     }
 
-    setupEventListeners(container) {
-        // Source selection buttons
-        container.querySelector('#selectDM').addEventListener('click', () => this.loadChannels('dms'));
-        container.querySelector('#selectServer').addEventListener('click', () => this.loadChannels('servers'));
+    // Update the selectChannel method to initialize media viewer when needed
+    selectChannel(channel) {
+        this.selectedChannel = {
+            ...channel,
+            guildId: channel.type === 'server-channel' ? channel.serverId : null
+        };
         
+        // Initialize media viewer if it hasn't been done yet
+        this.initializeMediaViewer();
+        
+        // Reset media-related state
+        this.mediaList = [];
+        this.currentIndex = 0;
+        this.currentOffset = 0;
+        this.hasMoreMedia = true;
+        this.mediaCache.clear();  // Clear the cache when switching channels
+        this.preloadingIndexes.clear();
+        
+        document.querySelector('.channel-selection').classList.add('hidden');
+        document.querySelector('.media-viewer-content').classList.remove('hidden');
+        document.querySelector('#channelName').textContent = channel.name;
+        
+        // Ensure media types are set to their default state
+        this.mediaTypes = {
+            images: true,
+            videos: true,
+            gifs: true
+        };
+        
+        // Update checkboxes to match default state
+        Object.keys(this.mediaTypes).forEach(type => {
+            const checkbox = document.querySelector(`#type${type.charAt(0).toUpperCase() + type.slice(1)}`);
+            if (checkbox) {
+                checkbox.checked = true;
+            }
+        });
+        
+        this.loadMedia();
+    }
+
+    // Split the event listeners setup
+    setupMediaEventListeners(container) {
         // Media type toggles
         Object.keys(this.mediaTypes).forEach(type => {
             const checkbox = container.querySelector(`#type${type.charAt(0).toUpperCase() + type.slice(1)}`);
@@ -132,57 +207,51 @@ class MediaViewerScreen extends BaseScreen {
             });
         });
 
-        // Navigation and other controls...
+        // Navigation and other controls
         container.querySelector('#prevMedia').addEventListener('click', () => this.navigateMedia(-1));
         container.querySelector('#nextMedia').addEventListener('click', () => this.navigateMedia(1));
         container.querySelector('#backToChannels').addEventListener('click', () => this.resetView());
-
-        // Add search functionality
-        const searchInput = container.querySelector('#channelSearch');
-        searchInput.addEventListener('input', () => {
-            this.filterChannels(searchInput.value.toLowerCase());
-        });
 
         // Add autoplay toggle listener
         const autoplayCheckbox = container.querySelector('#autoplayVideos');
         autoplayCheckbox.addEventListener('change', (e) => {
             this.autoplayVideos = e.target.checked;
+            if (e.target.checked) {
+                this.startAutoplayTimer();
+            } else {
+                this.clearAutoplayTimer();
+            }
         });
 
-        // Update volume control listener to persist the setting
+        // Volume control listener
         const volumeSlider = container.querySelector('#videoVolume');
         const volumeValue = container.querySelector('#volumeValue');
         
         volumeSlider.addEventListener('input', (e) => {
             const volume = parseInt(e.target.value) / 100;
             this.videoVolume = volume;
-            this.saveVolumeSetting(volume);  // Save to store
+            this.saveVolumeSetting(volume);
             volumeValue.textContent = `${Math.round(volume * 100)}%`;
             
-            // Update volume of currently playing video if exists
             const currentVideo = document.querySelector('#mediaContent video');
             if (currentVideo) {
                 currentVideo.volume = volume;
             }
         });
 
-        // Set initial volume value from stored setting
+        // Set initial volume value
         volumeSlider.value = this.videoVolume * 100;
         volumeValue.textContent = `${Math.round(this.videoVolume * 100)}%`;
 
-        // Add keyboard navigation
-        document.addEventListener('keydown', (e) => {
-            // Only handle keyboard events when media viewer is active
-            if (!this.selectedChannel) return;
-
-            switch (e.key) {
-                case 'ArrowLeft':
-                    this.navigateMedia(-1);
-                    break;
-                case 'ArrowRight':
-                    this.navigateMedia(1);
-                    break;
-            }
+        // Add autoplay delay control listener
+        const delaySlider = container.querySelector('#autoplayDelay');
+        const delayValue = container.querySelector('#delayValue');
+        
+        delaySlider.addEventListener('input', (e) => {
+            const delay = parseInt(e.target.value);
+            this.autoplayDelay = delay;
+            this.saveAutoplayDelaySetting(delay);
+            delayValue.textContent = `${delay}s`;
         });
     }
 
@@ -370,21 +439,10 @@ class MediaViewerScreen extends BaseScreen {
         });
     }
 
-    selectChannel(channel) {
-        this.selectedChannel = {
-            ...channel,
-            // Store guild ID when selecting a server channel
-            guildId: channel.type === 'server-channel' ? channel.serverId : null
-        };
-        
-        document.querySelector('.channel-selection').classList.add('hidden');
-        document.querySelector('.media-viewer-content').classList.remove('hidden');
-        document.querySelector('#channelName').textContent = channel.name;
-        
-        this.loadMedia();
-    }
-
     resetView() {
+        // Remove keyboard listener
+        document.removeEventListener('keydown', this.handleKeyPress.bind(this));
+
         // Stop any playing videos
         const currentVideo = document.querySelector('#mediaContent video');
         if (currentVideo) {
@@ -392,12 +450,31 @@ class MediaViewerScreen extends BaseScreen {
             currentVideo.src = ''; // Clear the source to fully stop the video
         }
 
+        // Reset state
         this.selectedChannel = null;
         this.mediaList = [];
         this.currentIndex = 0;
+        
+        // Remove the media viewer content entirely
+        const mediaViewerContent = this.container.querySelector('.media-viewer-content');
+        if (mediaViewerContent) {
+            mediaViewerContent.remove();
+        }
+        
+        // Hide channel list
+        const channelList = document.querySelector('#channelList');
+        if (channelList) {
+            channelList.classList.add('hidden');
+        }
+        
+        // Show only the initial selection screen
         document.querySelector('.channel-selection').classList.remove('hidden');
-        document.querySelector('.media-viewer-content').classList.add('hidden');
-        document.querySelector('#channelList').classList.add('hidden');
+        
+        // Clear any search input
+        const searchInput = document.querySelector('#channelSearch');
+        if (searchInput) {
+            searchInput.value = '';
+        }
     }
 
     escapeHtml(unsafe) {
@@ -482,12 +559,29 @@ class MediaViewerScreen extends BaseScreen {
     }
 
     async preloadBatch(startIndex, count = 5) {
+        // Log the current state
+        
+        // If we have few items total or we're approaching the end, fetch more
+        if ((this.mediaList.length < 10 || 
+             this.mediaList.length - startIndex <= 15) && 
+            this.hasMoreMedia && 
+            !this.isLoading) {
+            
+            if (this.mediaList.length < 10) {
+                Console.log(`Fetching more: Low total count (${this.mediaList.length} < 10)`);
+            } else {
+                Console.log(`Fetching more: ${this.mediaList.length - startIndex} items remaining`);
+            }
+            
+            await this.loadMedia(false);
+        }
+
         const endIndex = Math.min(startIndex + count, this.mediaList.length);
         const preloadPromises = [];
 
         const newIndexesToPreload = [];
         for (let i = startIndex; i < endIndex; i++) {
-            if (!this.preloadingIndexes.has(i) && !this.mediaCache.has(this.mediaList[i].url)) {
+            if (!this.preloadingIndexes.has(i) && !this.mediaCache.has(this.mediaList[i]?.url)) {
                 newIndexesToPreload.push(i);
                 this.preloadingIndexes.add(i);
             }
@@ -510,7 +604,7 @@ class MediaViewerScreen extends BaseScreen {
             try {
                 await Promise.all(preloadPromises);
             } catch (error) {
-                // Silent fail
+                // Silent fail for preloading errors
             }
         }
     }
@@ -564,10 +658,18 @@ class MediaViewerScreen extends BaseScreen {
             
             if (currentMedia.type === 'video') {
                 displayElement.controls = true;
-                displayElement.volume = this.videoVolume;  // Set the volume
+                displayElement.volume = this.videoVolume;
                 if (this.autoplayVideos) {
                     displayElement.autoplay = true;
+                    displayElement.addEventListener('ended', () => {
+                        if (this.autoplayVideos) {
+                            this.navigateMedia(1);
+                        }
+                    });
                 }
+            } else if (this.autoplayVideos) {
+                // Start timer for non-video media
+                this.startAutoplayTimer();
             }
 
             // Set initial styles
@@ -662,95 +764,106 @@ class MediaViewerScreen extends BaseScreen {
     }
 
     async loadMedia(reset = true) {
+        // Check if any media types are selected
+        const hasActiveFilters = Object.values(this.mediaTypes).some(type => type === true);
+        if (!hasActiveFilters) {
+            Console.log('No media types selected, skipping media load');
+            const mediaContent = document.querySelector('#mediaContent');
+            mediaContent.innerHTML = '<div class="no-media">No media types selected</div>';
+            document.querySelector('#mediaCounter').textContent = '0/0';
+            document.querySelector('#mediaDetails').textContent = '';
+            return;
+        }
+
         if (reset) {
             this.currentOffset = 0;
             this.mediaList = [];
             this.currentIndex = 0;
             this.hasMoreMedia = true;
-            this.initialMediaList = []; // Reset initial media list
+            this.initialMediaList = [];
         }
 
         if (!this.hasMoreMedia || this.isLoading) return;
 
         try {
             this.isLoading = true;
-            let response;
+            let foundMatchingMedia = false;
+            let attempts = 0;
+            const MAX_ATTEMPTS = 20;
+            const MIN_INITIAL_ITEMS = 5;
 
-            if (this.selectedChannel.type === 'server-all') {
-                response = await this.api.getGuildMedia(
-                    this.selectedChannel.id,
-                    {
-                        offset: this.currentOffset,
-                        mediaTypes: this.mediaTypes
-                    }
-                );
-            } else if (this.selectedChannel.type === 'server-channel') {
-                response = await this.api.getGuildMedia(
-                    this.selectedChannel.serverId,
-                    {
-                        channelId: this.selectedChannel.id,
-                        offset: this.currentOffset,
-                        mediaTypes: this.mediaTypes
-                    }
-                );
-            } else if (this.selectedChannel.type === 'dm') {
-                response = await this.api.getDMMedia(
-                    this.selectedChannel.id,
-                    {
-                        offset: this.currentOffset,
-                        mediaTypes: this.mediaTypes
-                    }
-                );
-            } else {
-                Console.error('Unknown channel type:', this.selectedChannel.type);
-                return;
-            }
-
-            // Store initial media list if this is the first load
-            if (reset && this.initialMediaList.length === 0) {
-                this.initialMediaList = [...response.media];
-            }
-
-            // Filter media based on current media types while maintaining original order
-            if (reset) {
-                this.mediaList = this.initialMediaList.filter(item => {
-                    if (item.type === 'gif' && this.mediaTypes.gifs) return true;
-                    if (item.type === 'video' && this.mediaTypes.videos) return true;
-                    if (item.type === 'image' && this.mediaTypes.images) return true;
-                    return false;
-                });
-            } else {
-                // For pagination, add new items that aren't in the initial list
-                const newMedia = response.media.filter(item => 
-                    !this.initialMediaList.some(initial => initial.url === item.url)
-                );
-                this.initialMediaList.push(...newMedia);
+            while ((!foundMatchingMedia || (reset && this.mediaList.length < MIN_INITIAL_ITEMS)) 
+                   && this.hasMoreMedia && attempts < MAX_ATTEMPTS) {
                 
-                // Update mediaList with filtered items
-                this.mediaList = this.initialMediaList.filter(item => {
-                    if (item.type === 'gif' && this.mediaTypes.gifs) return true;
-                    if (item.type === 'video' && this.mediaTypes.videos) return true;
-                    if (item.type === 'image' && this.mediaTypes.images) return true;
-                    return false;
-                });
+                Console.log(`Fetching media (offset: ${this.currentOffset})...`);
+                
+                let response;
+                if (this.selectedChannel.type === 'server-all') {
+                    response = await this.api.getGuildMedia(
+                        this.selectedChannel.id,
+                        {
+                            offset: this.currentOffset,
+                            mediaTypes: this.mediaTypes
+                        }
+                    );
+                } else if (this.selectedChannel.type === 'server-channel') {
+                    response = await this.api.getGuildMedia(
+                        this.selectedChannel.serverId,
+                        {
+                            channelId: this.selectedChannel.id,
+                            offset: this.currentOffset,
+                            mediaTypes: this.mediaTypes
+                        }
+                    );
+                } else if (this.selectedChannel.type === 'dm') {
+                    response = await this.api.getDMMedia(
+                        this.selectedChannel.id,
+                        {
+                            offset: this.currentOffset,
+                            mediaTypes: this.mediaTypes
+                        }
+                    );
+                }
+
+                if (reset && this.initialMediaList.length === 0) {
+                    this.initialMediaList = [...response.media];
+                }
+
+                this.hasMoreMedia = response.hasMore;
+                this.currentOffset = response.offset;
+                this.totalResults = response.total;
+
+                if (response.media.length > 0) {
+                    const currentPosition = this.currentIndex;
+                    
+                    const newMedia = response.media.filter(item => 
+                        !this.mediaList.some(existing => existing.url === item.url)
+                    );
+                    this.mediaList.push(...newMedia);
+                    
+                    if (reset && !foundMatchingMedia) {
+                        this.currentIndex = 0;
+                        await this.displayCurrentMedia();
+                    } else {
+                        this.currentIndex = currentPosition;
+                        document.querySelector('#mediaCounter').textContent = 
+                            `${this.currentIndex + 1}/${this.mediaList.length}`;
+                    }
+                    foundMatchingMedia = true;
+
+                    // Trigger preloading for new items
+                    this.preloadBatch(this.mediaList.length - newMedia.length, newMedia.length);
+                }
+                attempts++;
             }
 
-            this.hasMoreMedia = response.hasMore;
-            this.currentOffset = response.offset;
-            this.totalResults = response.total;
-
-            Console.log(`Loaded ${this.mediaList.length}/${this.totalResults} media items...`);
-
-            if (reset) {
-                if (this.mediaList.length === 0) {
-                    const mediaContent = document.querySelector('#mediaContent');
-                    mediaContent.innerHTML = '<div class="no-media">No media found</div>';
-                    document.querySelector('#mediaCounter').textContent = '0/0';
-                    document.querySelector('#mediaDetails').textContent = '';
-                    return;
-                }
-                await this.displayCurrentMedia();
-                Console.success(`Initially loaded ${this.mediaList.length} media items`);
+            if (reset && this.mediaList.length > 0) {
+                Console.success(`Loaded ${this.mediaList.length} media items`);
+            } else if (this.mediaList.length === 0) {
+                const mediaContent = document.querySelector('#mediaContent');
+                mediaContent.innerHTML = '<div class="no-media">No media found</div>';
+                document.querySelector('#mediaCounter').textContent = '0/0';
+                document.querySelector('#mediaDetails').textContent = '';
             }
 
         } catch (error) {
@@ -765,10 +878,28 @@ class MediaViewerScreen extends BaseScreen {
 
         const newIndex = this.currentIndex + direction;
         
-        // Handle wrapping
-        if (newIndex < 0) this.currentIndex = this.mediaList.length - 1;
-        else if (newIndex >= this.mediaList.length) this.currentIndex = 0;
-        else this.currentIndex = newIndex;
+        // Don't allow navigation past the end while loading more
+        if (newIndex >= this.mediaList.length && this.isLoading) {
+            return;
+        }
+
+        // Handle wrapping for backwards navigation only
+        if (newIndex < 0) {
+            this.currentIndex = this.mediaList.length - 1;
+        }
+        // For forward navigation, only proceed if we have the item
+        else if (newIndex < this.mediaList.length) {
+            this.currentIndex = newIndex;
+        }
+        // Otherwise, try to load more data but don't change the index
+        else if (this.hasMoreMedia) {
+            await this.preloadBatch(this.currentIndex, 5);
+            // If new items were loaded, then we can proceed
+            if (newIndex < this.mediaList.length) {
+                this.currentIndex = newIndex;
+            }
+            return;
+        }
 
         // Display current media
         await this.displayCurrentMedia();
@@ -779,14 +910,6 @@ class MediaViewerScreen extends BaseScreen {
             Math.max(0, this.currentIndex - 5);
             
         this.preloadBatch(preloadStartIndex, 5);
-
-        // Check if we need to load more media from API
-        if (direction > 0 && 
-            this.currentIndex >= this.mediaList.length - 5 && 
-            this.hasMoreMedia && 
-            !this.isLoading) {
-            await this.loadMedia(false);
-        }
     }
 
     filterChannels(searchTerm) {
@@ -811,6 +934,44 @@ class MediaViewerScreen extends BaseScreen {
             }
         } else if (noResults) {
             noResults.remove();
+        }
+    }
+
+    // Add new method for keyboard navigation
+    handleKeyPress(event) {
+        // Only handle keys if media viewer is active
+        if (!this.selectedChannel || this.container.querySelector('.media-viewer-content.hidden')) {
+            return;
+        }
+
+        switch (event.key) {
+            case 'ArrowLeft':
+                this.navigateMedia(-1);
+                break;
+            case 'ArrowRight':
+                this.navigateMedia(1);
+                break;
+        }
+    }
+
+    startAutoplayTimer() {
+        this.clearAutoplayTimer(); // Clear any existing timer
+        
+        const currentMedia = this.mediaList[this.currentIndex];
+        if (!currentMedia) return;
+
+        // Don't set timer for videos (they handle their own advancement)
+        if (currentMedia.type !== 'video') {
+            this.autoplayTimer = setTimeout(() => {
+                this.navigateMedia(1);
+            }, this.autoplayDelay * 1000);
+        }
+    }
+
+    clearAutoplayTimer() {
+        if (this.autoplayTimer) {
+            clearTimeout(this.autoplayTimer);
+            this.autoplayTimer = null;
         }
     }
 }
