@@ -862,6 +862,431 @@ class DiscordAPI {
         return '█'.repeat(filled) + '░'.repeat(empty);
     }
 
+    async getChannelMedia(channelId, options = {}) {
+        const {
+            beforeId = null,
+            afterId = null,
+            limit = 25,
+            mediaTypes = {
+                images: true,
+                videos: true,
+                gifs: true,
+                embeds: true
+            }
+        } = options;
+
+        try {
+            const params = new URLSearchParams();
+            if (beforeId) params.append('before', beforeId);
+            if (afterId) params.append('after', afterId);
+            params.append('limit', limit);
+
+            const response = await this.makeRequest(`/channels/${channelId}/messages?${params}`);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch messages: ${response.status}`);
+            }
+
+            const messages = await response.json();
+            const mediaItems = [];
+
+            for (const message of messages) {
+                // Process attachments
+                if (message.attachments) {
+                    for (const attachment of message.attachments) {
+                        const contentType = attachment.content_type || '';
+                        const isGif = contentType === 'image/gif' || 
+                                    attachment.filename.toLowerCase().endsWith('.gif');
+                        
+                        if (mediaTypes.images && contentType.startsWith('image/') && !isGif) {
+                            mediaItems.push({
+                                type: 'image',
+                                url: attachment.url,
+                                filename: attachment.filename,
+                                messageId: message.id,
+                                channelId: message.channel_id,
+                                timestamp: message.timestamp,
+                                size: attachment.size,
+                                dimensions: {
+                                    width: attachment.width,
+                                    height: attachment.height
+                                }
+                            });
+                        } else if (mediaTypes.videos && contentType.startsWith('video/')) {
+                            mediaItems.push({
+                                type: 'video',
+                                url: attachment.url,
+                                filename: attachment.filename,
+                                messageId: message.id,
+                                channelId: message.channel_id,
+                                timestamp: message.timestamp,
+                                size: attachment.size,
+                                dimensions: {
+                                    width: attachment.width,
+                                    height: attachment.height
+                                }
+                            });
+                        } else if (mediaTypes.gifs && isGif) {
+                            mediaItems.push({
+                                type: 'gif',
+                                url: attachment.url,
+                                filename: attachment.filename,
+                                messageId: message.id,
+                                channelId: message.channel_id,
+                                timestamp: message.timestamp,
+                                size: attachment.size,
+                                dimensions: {
+                                    width: attachment.width,
+                                    height: attachment.height
+                                }
+                            });
+                        }
+                    }
+                }
+
+                // Process embeds if enabled
+                if (mediaTypes.embeds && message.embeds) {
+                    for (const embed of message.embeds) {
+                        if (embed.type === 'image' || embed.type === 'gifv' || 
+                            (embed.image && embed.image.url)) {
+                            mediaItems.push({
+                                type: embed.type === 'gifv' ? 'gif' : 'image',
+                                url: embed.image?.url || embed.url,
+                                filename: embed.title || 'Embed',
+                                messageId: message.id,
+                                channelId: message.channel_id,
+                                timestamp: message.timestamp,
+                                embedData: embed
+                            });
+                        } else if (embed.type === 'video' || embed.video) {
+                            mediaItems.push({
+                                type: 'video',
+                                url: embed.video?.url || embed.url,
+                                filename: embed.title || 'Video Embed',
+                                messageId: message.id,
+                                channelId: message.channel_id,
+                                timestamp: message.timestamp,
+                                embedData: embed
+                            });
+                        }
+                    }
+                }
+            }
+
+            return {
+                media: mediaItems,
+                hasMore: messages.length === limit,
+                lastMessageId: messages[messages.length - 1]?.id
+            };
+        } catch (error) {
+            console.error('Error fetching channel media:', error);
+            throw error;
+        }
+    }
+
+    async getGuildChannels(guildId) {
+        try {
+            const response = await this.makeRequest(`/guilds/${guildId}/channels`);
+            
+            if (!response.ok) {
+                throw new Error(`Failed to fetch guild channels: ${response.status}`);
+            }
+
+            const channels = await response.json();
+            
+            // Filter and sort text channels
+            // Channel types: 0 = TEXT, 2 = VOICE, 4 = CATEGORY, 5 = ANNOUNCEMENT
+            return channels
+                .filter(channel => channel.type === 0 || channel.type === 5) // Only text and announcement channels
+                .sort((a, b) => {
+                    // First sort by category position
+                    const categoryCompare = (a.parent_id || '').localeCompare(b.parent_id || '');
+                    if (categoryCompare !== 0) return categoryCompare;
+                    
+                    // Then by channel position
+                    return a.position - b.position;
+                })
+                .map(channel => ({
+                    id: channel.id,
+                    name: channel.name,
+                    type: channel.type,
+                    position: channel.position,
+                    parent_id: channel.parent_id,
+                    nsfw: channel.nsfw
+                }));
+
+        } catch (error) {
+            console.error('Error fetching guild channels:', error);
+            throw error;
+        }
+    }
+
+    async getGuildMedia(guildId, options = {}) {
+        const {
+            offset = 0,
+            limit = 25,
+            channelId = null,
+            mediaTypes = {
+                images: true,
+                videos: true,
+                gifs: true
+            }
+        } = options;
+
+        try {
+            const params = new URLSearchParams();
+            
+            // Add channel_id if provided
+            if (channelId) {
+                params.append('channel_id', channelId);
+            }
+            
+            // Only add the media types that are enabled
+            if (mediaTypes.videos) params.append('has', 'video');
+            if (mediaTypes.images || mediaTypes.gifs) params.append('has', 'image');
+            
+            params.append('include_nsfw', 'true');
+            
+            // Add offset and limit
+            if (offset > 0) params.append('offset', offset.toString());
+            if (limit !== 25) params.append('limit', limit.toString());
+
+            const response = await this.makeRequest(`/guilds/${guildId}/messages/search?${params}`);
+            
+            if (!response.ok) {
+                throw new Error(`Failed to fetch guild media: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const mediaItems = [];
+
+            // Process the messages
+            for (const message of data.messages.flat()) {
+                // Process attachments
+                if (message.attachments) {
+                    for (const attachment of message.attachments) {
+                        const contentType = attachment.content_type || '';
+                        const isGif = contentType === 'image/gif' || 
+                                    attachment.filename.toLowerCase().endsWith('.gif');
+                        
+                        if (mediaTypes.images && contentType.startsWith('image/') && !isGif) {
+                            mediaItems.push({
+                                type: 'image',
+                                url: attachment.url,
+                                filename: attachment.filename,
+                                messageId: message.id,
+                                timestamp: message.timestamp,
+                                size: attachment.size,
+                                channelId: message.channel_id,
+                                dimensions: {
+                                    width: attachment.width,
+                                    height: attachment.height
+                                }
+                            });
+                        } else if (mediaTypes.videos && contentType.startsWith('video/')) {
+                            mediaItems.push({
+                                type: 'video',
+                                url: attachment.url,
+                                filename: attachment.filename,
+                                messageId: message.id,
+                                timestamp: message.timestamp,
+                                size: attachment.size,
+                                channelId: message.channel_id,
+                                dimensions: {
+                                    width: attachment.width,
+                                    height: attachment.height
+                                }
+                            });
+                        } else if (mediaTypes.gifs && isGif) {
+                            mediaItems.push({
+                                type: 'gif',
+                                url: attachment.url,
+                                filename: attachment.filename,
+                                messageId: message.id,
+                                timestamp: message.timestamp,
+                                size: attachment.size,
+                                channelId: message.channel_id,
+                                dimensions: {
+                                    width: attachment.width,
+                                    height: attachment.height
+                                }
+                            });
+                        }
+                    }
+                }
+
+                // Process embeds if enabled
+                if (mediaTypes.embeds && message.embeds) {
+                    for (const embed of message.embeds) {
+                        if (embed.type === 'image' || embed.type === 'gifv' || 
+                            (embed.image && embed.image.url)) {
+                            mediaItems.push({
+                                type: embed.type === 'gifv' ? 'gif' : 'image',
+                                url: embed.image?.url || embed.url,
+                                filename: embed.title || 'Embed',
+                                messageId: message.id,
+                                timestamp: message.timestamp,
+                                channelId: message.channel_id,
+                                embedData: embed
+                            });
+                        } else if (embed.type === 'video' || embed.video) {
+                            mediaItems.push({
+                                type: 'video',
+                                url: embed.video?.url || embed.url,
+                                filename: embed.title || 'Video Embed',
+                                messageId: message.id,
+                                timestamp: message.timestamp,
+                                channelId: message.channel_id,
+                                embedData: embed
+                            });
+                        }
+                    }
+                }
+            }
+
+            return {
+                media: mediaItems,
+                total: data.total_results,
+                hasMore: data.total_results > (offset + limit),
+                offset: offset + limit
+            };
+        } catch (error) {
+            console.error('Error fetching guild media:', error);
+            throw error;
+        }
+    }
+
+    async getMessage(channelId, messageId) {
+        try {
+            // For user accounts, we need to use the search endpoint instead
+            const params = new URLSearchParams({
+                channel_id: channelId,
+                min_id: (BigInt(messageId) - 1n).toString(),
+                max_id: (BigInt(messageId) + 1n).toString(),
+                limit: 1
+            });
+
+            const response = await this.makeRequest(`/channels/${channelId}/messages/search?${params}`);
+            
+            if (!response.ok) {
+                if (response.status === 404 || response.status === 403) {
+                    return null; // Message not found or no access
+                }
+                throw new Error(`Failed to fetch message: ${response.status}`);
+            }
+
+            const data = await response.json();
+            // Find the exact message we're looking for
+            const message = data.messages
+                .flat()
+                .find(msg => msg.id === messageId);
+
+            return message || null;
+
+        } catch (error) {
+            Console.error('Error fetching message:', error);
+            return null;
+        }
+    }
+
+    async getDMMedia(channelId, options = {}) {
+        const {
+            offset = 0,
+            limit = 25,
+            mediaTypes = {
+                images: true,
+                videos: true,
+                gifs: true
+            }
+        } = options;
+
+        try {
+            const params = new URLSearchParams();
+            
+            // Add media type filters
+            if (mediaTypes.videos) params.append('has', 'video');
+            if (mediaTypes.images || mediaTypes.gifs) params.append('has', 'image');
+            
+            // Add offset and limit
+            if (offset > 0) params.append('offset', offset.toString());
+            if (limit !== 25) params.append('limit', limit.toString());
+
+            const response = await this.makeRequest(`/channels/${channelId}/messages/search?${params}`);
+            
+            if (!response.ok) {
+                throw new Error(`Failed to fetch DM media: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const mediaItems = [];
+
+            // Process the messages
+            for (const message of data.messages.flat()) {
+                // Process attachments
+                if (message.attachments) {
+                    for (const attachment of message.attachments) {
+                        const contentType = attachment.content_type || '';
+                        const isGif = contentType === 'image/gif' || 
+                                    attachment.filename.toLowerCase().endsWith('.gif');
+                        
+                        if (mediaTypes.images && contentType.startsWith('image/') && !isGif) {
+                            mediaItems.push({
+                                type: 'image',
+                                url: attachment.url,
+                                filename: attachment.filename,
+                                messageId: message.id,
+                                timestamp: message.timestamp,
+                                size: attachment.size,
+                                channelId: message.channel_id,
+                                dimensions: {
+                                    width: attachment.width,
+                                    height: attachment.height
+                                }
+                            });
+                        } else if (mediaTypes.videos && contentType.startsWith('video/')) {
+                            mediaItems.push({
+                                type: 'video',
+                                url: attachment.url,
+                                filename: attachment.filename,
+                                messageId: message.id,
+                                timestamp: message.timestamp,
+                                size: attachment.size,
+                                channelId: message.channel_id,
+                                dimensions: {
+                                    width: attachment.width,
+                                    height: attachment.height
+                                }
+                            });
+                        } else if (mediaTypes.gifs && isGif) {
+                            mediaItems.push({
+                                type: 'gif',
+                                url: attachment.url,
+                                filename: attachment.filename,
+                                messageId: message.id,
+                                timestamp: message.timestamp,
+                                size: attachment.size,
+                                channelId: message.channel_id,
+                                dimensions: {
+                                    width: attachment.width,
+                                    height: attachment.height
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+
+            return {
+                media: mediaItems,
+                total: data.total_results,
+                hasMore: data.total_results > (offset + limit),
+                offset: offset + limit
+            };
+        } catch (error) {
+            Console.error('Error fetching DM media:', error);
+            throw error;
+        }
+    }
+
 }
 
 module.exports = DiscordAPI; 

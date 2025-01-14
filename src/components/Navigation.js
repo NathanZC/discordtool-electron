@@ -18,7 +18,7 @@ class Navigation {
             { id: 'open-dms', label: 'Open DMs', icon: '💬' },
             { id: 'servers', label: 'Accessible Servers', icon: '🖥️' },
             { id: 'closed-dms', label: 'Find Closed DMs', icon: '🔍' },
-            // { id: 'media-viewer', label: 'Media Viewer', icon: '🖼️' },
+            { id: 'media-viewer', label: 'Media Viewer', icon: '🖼️' },
             { id: 'wipe', label: 'Wipe Account', icon: '🗑️' },
             { id: 'help', label: 'How to Use', icon: '❔' },
         ];
