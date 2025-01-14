@@ -41,6 +41,9 @@ class MediaViewerScreen extends BaseScreen {
         this.FETCH_COOLDOWN = 1000;
         this.savedFiles = [];
 
+        // Add new setting for duplicate filtering
+        this.filterDuplicates = this.store.get('filterDuplicates', true); // Default to true
+
         // Add IPC listener for download progress
         const { ipcRenderer } = require('electron');
         ipcRenderer.on('download-progress', (event, { message, type }) => {
@@ -91,6 +94,9 @@ class MediaViewerScreen extends BaseScreen {
                 element.load();
             }
         });
+
+        // Add a new Map to store file hashes
+        this.mediaHashes = new Map();
     }
 
     // Load volume from store
@@ -225,6 +231,9 @@ class MediaViewerScreen extends BaseScreen {
             <div class="media-info">
                 <span id="mediaCounter">0/0</span>
                 <span id="mediaDetails"></span>
+                <div class="filter-controls">
+                    <label><input type="checkbox" id="filterDuplicates" ${this.filterDuplicates ? 'checked' : ''}> Filter Duplicates</label>
+                </div>
             </div>
         `;
 
@@ -253,19 +262,23 @@ class MediaViewerScreen extends BaseScreen {
         // Initialize media viewer if it hasn't been done yet
         this.initializeMediaViewer();
         
-        // Reset media-related state
+        // Reset ALL media-related state
         this.mediaList = [];
         this.currentIndex = 0;
         this.currentOffset = 0;
         this.hasMoreMedia = true;
-        this.mediaCache.clear();  // Clear the cache when switching channels
+        this.mediaCache.clear();
+        this.mediaHashes.clear();
         this.preloadingIndexes.clear();
+        this.savedFiles = []; // Also reset saved files
+        this.initialMediaList = []; // Reset initial media list
+        this.clearAutoplayTimer(); // Clear any existing autoplay timer
         
         document.querySelector('.channel-selection').classList.add('hidden');
         document.querySelector('.media-viewer-content').classList.remove('hidden');
         document.querySelector('#channelName').textContent = channel.name;
         
-        // Ensure media types are set to their default state
+        // Reset media types to default state
         this.mediaTypes = {
             images: true,
             videos: true,
@@ -280,6 +293,16 @@ class MediaViewerScreen extends BaseScreen {
             }
         });
         
+        // Clear any existing media display
+        const mediaContent = document.querySelector('#mediaContent');
+        if (mediaContent) {
+            mediaContent.innerHTML = '<div class="loading">Loading media...</div>';
+        }
+        
+        // Reset counter and details
+        document.querySelector('#mediaCounter').textContent = '0/0';
+        document.querySelector('#mediaDetails').textContent = '';
+        
         this.loadMedia();
     }
 
@@ -290,6 +313,9 @@ class MediaViewerScreen extends BaseScreen {
             const checkbox = container.querySelector(`#type${type.charAt(0).toUpperCase() + type.slice(1)}`);
             checkbox.addEventListener('change', (e) => {
                 this.mediaTypes[type] = e.target.checked;
+                // Clear hashes when filters change
+                this.mediaHashes.clear();
+                Console.log('Media filters changed, cleared hash cache');
                 if (this.selectedChannel) {
                     this.loadMedia();
                 }
@@ -362,6 +388,22 @@ class MediaViewerScreen extends BaseScreen {
                 this.saveLocation = result.filePaths[0];
                 this.saveSaveLocationSetting(this.saveLocation);
                 currentSaveLocation.textContent = this.saveLocation;
+            }
+        });
+
+        // Add duplicate filter toggle listener
+        const filterDuplicatesCheckbox = container.querySelector('#filterDuplicates');
+        filterDuplicatesCheckbox.addEventListener('change', async (e) => {
+            this.saveFilterDuplicatesState(e.target.checked);
+            if (this.selectedChannel) {
+                // Reset and reload media with new filter setting
+                this.mediaList = [];
+                this.currentIndex = 0;
+                this.currentOffset = 0;
+                this.hasMoreMedia = true;
+                this.mediaCache.clear();
+                this.mediaHashes.clear();
+                await this.loadMedia();
             }
         });
     }
@@ -558,13 +600,22 @@ class MediaViewerScreen extends BaseScreen {
         const currentVideo = document.querySelector('#mediaContent video');
         if (currentVideo) {
             currentVideo.pause();
-            currentVideo.src = ''; // Clear the source to fully stop the video
+            currentVideo.src = '';
+            currentVideo.load();
         }
 
-        // Reset state
+        // Reset ALL state
         this.selectedChannel = null;
         this.mediaList = [];
         this.currentIndex = 0;
+        this.currentOffset = 0;
+        this.hasMoreMedia = true;
+        this.mediaCache.clear();
+        this.mediaHashes.clear();
+        this.preloadingIndexes.clear();
+        this.savedFiles = [];
+        this.initialMediaList = [];
+        this.clearAutoplayTimer();
         
         // Remove the media viewer content entirely
         const mediaViewerContent = this.container.querySelector('.media-viewer-content');
@@ -621,6 +672,16 @@ class MediaViewerScreen extends BaseScreen {
             }
 
             const blob = await response.blob();
+            
+            // Only calculate and store hash if duplicate filtering is enabled
+            if (this.filterDuplicates) {
+                const arrayBuffer = await blob.arrayBuffer();
+                const hashBuffer = await crypto.subtle.digest('SHA-1', arrayBuffer);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                this.mediaHashes.set(mediaItem.url, hashHex);
+            }
+
             const objectUrl = URL.createObjectURL(blob);
 
             return new Promise((resolve) => {
@@ -670,52 +731,69 @@ class MediaViewerScreen extends BaseScreen {
     }
 
     async preloadBatch(startIndex, count = 5) {
-        // Log the current state
-        
         // If we have few items total or we're approaching the end, fetch more
-        if ((this.mediaList.length < 10 || 
-             this.mediaList.length - startIndex <= 15) && 
+        if ((this.mediaList.length < 15 || 
+             this.mediaList.length - startIndex <= 25) && 
             this.hasMoreMedia && 
             !this.isLoading) {
-            
-            if (this.mediaList.length < 10) {
-                Console.log(`Fetching more: Low total count (${this.mediaList.length} < 10)`);
-            } else {
-                Console.log(`Fetching more: ${this.mediaList.length - startIndex} items remaining`);
-            }
-            
             await this.loadMedia(false);
         }
 
         const endIndex = Math.min(startIndex + count, this.mediaList.length);
         const preloadPromises = [];
+        // Only create duplicates set if filtering is enabled
+        const duplicates = this.filterDuplicates ? new Set() : null;
 
-        const newIndexesToPreload = [];
         for (let i = startIndex; i < endIndex; i++) {
-            if (!this.preloadingIndexes.has(i) && !this.mediaCache.has(this.mediaList[i]?.url)) {
-                newIndexesToPreload.push(i);
+            const mediaItem = this.mediaList[i];
+            if (!this.preloadingIndexes.has(i) && !this.mediaCache.has(mediaItem?.url)) {
                 this.preloadingIndexes.add(i);
+                
+                // Wrap each preload in a promise that also checks for duplicates
+                const promise = this.preloadMedia(mediaItem)
+                    .then(async () => {
+                        // Only check for duplicates if filtering is enabled
+                        if (this.filterDuplicates && duplicates) {
+                            const currentHash = this.mediaHashes.get(mediaItem.url);
+                            if (currentHash) {
+                                for (const [existingUrl, existingHash] of this.mediaHashes.entries()) {
+                                    if (existingUrl !== mediaItem.url && existingHash === currentHash) {
+                                        Console.log(`Found duplicate content: ${mediaItem.filename} matches ${existingUrl}`);
+                                        duplicates.add(mediaItem.url);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    })
+                    .finally(() => {
+                        this.preloadingIndexes.delete(i);
+                    });
+
+                preloadPromises.push(promise);
             }
-        }
-
-        if (newIndexesToPreload.length === 0) {
-            return;
-        }
-
-        for (const index of newIndexesToPreload) {
-            const mediaItem = this.mediaList[index];
-            preloadPromises.push(
-                this.preloadMedia(mediaItem).finally(() => {
-                    this.preloadingIndexes.delete(index);
-                })
-            );
         }
 
         if (preloadPromises.length > 0) {
             try {
                 await Promise.all(preloadPromises);
+                
+                // Only remove duplicates if filtering is enabled and duplicates were found
+                if (this.filterDuplicates && duplicates && duplicates.size > 0) {
+                    const oldLength = this.mediaList.length;
+                    this.mediaList = this.mediaList.filter(item => !duplicates.has(item.url));
+                    Console.log(`Removed ${duplicates.size} duplicates`);
+                    
+                    // Adjust currentIndex if needed
+                    if (this.currentIndex >= this.mediaList.length) {
+                        this.currentIndex = Math.max(0, this.mediaList.length - 1);
+                        await this.displayCurrentMedia();
+                    } else {
+                        this.updateMediaCounter();
+                    }
+                }
             } catch (error) {
-                // Silent fail for preloading errors
+                Console.error('Error during preload batch:', error);
             }
         }
     }
@@ -945,36 +1023,51 @@ class MediaViewerScreen extends BaseScreen {
                 this.totalResults = response.total;
 
                 if (response.media.length > 0) {
-                    const currentPosition = this.currentIndex;
-                    
-                    const newMedia = response.media.filter(item => 
+                    // Always filter URL duplicates
+                    const urlFilteredMedia = response.media.filter(item => 
                         !this.mediaList.some(existing => existing.url === item.url)
                     );
-                    this.mediaList.push(...newMedia);
-                    
-                    if (reset && !foundMatchingMedia) {
-                        this.currentIndex = 0;
-                        await this.displayCurrentMedia();
-                    } else {
-                        this.currentIndex = currentPosition;
-                        document.querySelector('#mediaCounter').textContent = 
-                            `${this.currentIndex + 1}/${this.mediaList.length}`;
-                    }
-                    foundMatchingMedia = true;
 
-                    // Trigger preloading for new items
-                    this.preloadBatch(this.mediaList.length - newMedia.length, newMedia.length);
+                    if (urlFilteredMedia.length > 0) {
+                        let newMedia = urlFilteredMedia;
+
+                        if (this.filterDuplicates) {
+                            const duplicates = await this.processHashesInBackground(urlFilteredMedia);
+                            newMedia = urlFilteredMedia.filter(item => 
+                                !duplicates.some(dup => dup.url === item.url)
+                            );
+
+                            if (duplicates.length > 0) {
+                                Console.log(`Filtered out ${duplicates.length} duplicate items`);
+                            }
+                        }
+
+                        if (newMedia.length > 0) {
+                            this.mediaList.push(...newMedia);
+                            
+                            if (reset) {
+                                this.currentIndex = 0;
+                                await this.displayCurrentMedia();
+                            } else {
+                                // Don't modify currentIndex, just update the counter
+                                this.updateMediaCounter();
+                            }
+                            foundMatchingMedia = true;
+
+                            // Start preloading the new items
+                            this.preloadBatch(this.mediaList.length - newMedia.length, newMedia.length);
+                        }
+                    }
                 }
                 attempts++;
             }
 
             if (reset && this.mediaList.length > 0) {
-                Console.success(`Loaded ${this.mediaList.length} media items`);
+                Console.success(`Initially loaded ${this.mediaList.length} media items`);
             } else if (this.mediaList.length === 0) {
                 const mediaContent = document.querySelector('#mediaContent');
                 mediaContent.innerHTML = '<div class="no-media">No media found</div>';
-                document.querySelector('#mediaCounter').textContent = '0/0';
-                document.querySelector('#mediaDetails').textContent = '';
+                this.updateMediaCounter();
             }
 
         } catch (error) {
@@ -982,6 +1075,65 @@ class MediaViewerScreen extends BaseScreen {
         } finally {
             this.isLoading = false;
         }
+    }
+
+    // Add new helper methods
+    updateMediaCounter() {
+        const counter = document.querySelector('#mediaCounter');
+        if (counter) {
+            counter.textContent = this.mediaList.length > 0 ? 
+                `${this.currentIndex + 1}/${this.mediaList.length}` : 
+                '0/0';
+        }
+    }
+
+    async processHashesInBackground(mediaItems) {
+        const duplicates = [];
+        
+        // If filtering is disabled, return empty duplicates array
+        if (!this.filterDuplicates) {
+            return duplicates;
+        }
+        
+        for (const item of mediaItems) {
+            try {
+                const response = await fetch(item.url, {
+                    referrer: "https://discord.com",
+                    referrerPolicy: "no-referrer-when-downgrade",
+                });
+                
+                if (!response.ok) continue;
+                
+                const buffer = await response.arrayBuffer();
+                const hashBuffer = await crypto.subtle.digest('SHA-1', buffer);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+                // Check if this hash exists in our collection
+                let isDuplicate = false;
+                for (const [existingUrl, existingHash] of this.mediaHashes.entries()) {
+                    if (existingHash === hashHex && existingUrl !== item.url) {
+                        Console.log(`Found duplicate content: ${item.filename} matches ${existingUrl}`);
+                        isDuplicate = true;
+                        duplicates.push(item);
+                        break;
+                    }
+                }
+
+                // Only store hash if we're filtering duplicates
+                if (this.filterDuplicates) {
+                    this.mediaHashes.set(item.url, hashHex);
+                }
+
+            } catch (error) {
+                Console.error(`Error processing ${item.filename}: ${error.message}`);
+                if (this.filterDuplicates) {
+                    this.mediaHashes.set(item.url, null);
+                }
+            }
+        }
+
+        return duplicates;
     }
 
     async navigateMedia(direction) {
@@ -994,9 +1146,9 @@ class MediaViewerScreen extends BaseScreen {
             return;
         }
 
-        // Handle wrapping for backwards navigation only
+        // Don't allow navigation past the beginning
         if (newIndex < 0) {
-            this.currentIndex = this.mediaList.length - 1;
+            return;
         }
         // For forward navigation, only proceed if we have the item
         else if (newIndex < this.mediaList.length) {
@@ -1237,7 +1389,17 @@ class MediaViewerScreen extends BaseScreen {
             }
         });
         
+        // Clear media hashes
+        this.mediaHashes.clear();
+        
         Console.success('MediaViewer cleanup completed');
+    }
+
+    // Add new method to save filter state
+    saveFilterDuplicatesState(state) {
+        this.filterDuplicates = state;
+        this.store.set('filterDuplicates', state);
+        Console.log(`Saving duplicate filter state: ${state}`);
     }
 }
 
