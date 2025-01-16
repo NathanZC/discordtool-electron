@@ -7,7 +7,7 @@ class ClosedDMsScreen extends BaseScreen {
     // Add static property to store loaded data
     static loadedData = null;
 
-    constructor(token, userId) {
+    constructor(token, userId, preloadedData = null) {
         super(token);
         this.api = new DiscordAPI(token, userId);
         this.closedDMs = new Map(); // Store closed DM data
@@ -15,6 +15,7 @@ class ClosedDMsScreen extends BaseScreen {
         this.store = new Store(); // Add store instance
         this.isRunning = false;
         this.isCountingMessages = false;
+        this.preloadedData = preloadedData;
         
         // Load saved file path and data for current user
         this.loadedFilePath = this.loadFilePath();
@@ -171,9 +172,28 @@ class ClosedDMsScreen extends BaseScreen {
         });
     }
 
-    async loadOpenDMs() {
+    async loadOpenDMs(forceRefresh = false) {
         try {
-            const dms = await this.api.getAllOpenDMs();
+            let dms;
+            if (!forceRefresh && this.preloadedData?.dms) {
+                dms = this.preloadedData.dms;
+                Console.log('Using preloaded DM data');
+            } else {
+                dms = await this.api.getAllOpenDMs();
+                // Update preloaded data cache in both this component and the parent Navigation
+                if (this.preloadedData) {
+                    this.preloadedData.dms = dms;
+                    
+                    // Get the Navigation instance from the window
+                    const navigationInstance = window.navigationInstance;
+                    if (navigationInstance?.preloadedData) {
+                        navigationInstance.preloadedData.dms = dms;
+                        Console.log('Updated Navigation preloaded data');
+                    }
+                }
+                Console.log('Fetched fresh DM data from API');
+            }
+
             // Clear and repopulate the Set with channel IDs
             this.openDMs.clear();
             dms.forEach(dm => this.openDMs.add(dm.id));
@@ -389,7 +409,7 @@ class ClosedDMsScreen extends BaseScreen {
         const refreshBtn = container.querySelector('#refreshDMsBtn');
         refreshBtn.addEventListener('click', async () => {
             refreshBtn.classList.add('spinning');
-            await this.loadOpenDMs();
+            await this.loadOpenDMs(true); // Pass true to force refresh
             this.renderDMsList();
             refreshBtn.classList.remove('spinning');
         });

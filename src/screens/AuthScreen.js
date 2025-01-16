@@ -106,6 +106,38 @@ class AuthScreen {
         const response = await discord.verifyToken(token);
         
         if (response.isValid) {
+            this.showStatus('Connected successfully!', 'success');
+            
+            // Preload data before navigating
+            const preloadedData = {
+                dms: null,
+                servers: null
+            };
+
+            try {
+                // Create a timeout promise
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Timeout')), 5000);
+                });
+
+                // Load both DMs and servers with timeout
+                const dataPromise = Promise.all([
+                    discord.getAllOpenDMs(),
+                    discord.getAllAccessibleServers()
+                ]);
+
+                const [dms, servers] = await Promise.race([
+                    dataPromise,
+                    timeoutPromise
+                ]);
+                
+                preloadedData.dms = dms;
+                preloadedData.servers = servers;
+                console.log('Pre-loaded data successfully');
+            } catch (error) {
+                console.error('Error pre-loading data:', error);
+            }
+
             const rememberMe = document.getElementById('rememberMe');
             if (rememberMe.checked) {
                 const accountData = {
@@ -128,12 +160,8 @@ class AuthScreen {
                 lastUsed: new Date().toISOString()
             });
             
-            this.showStatus('Connected successfully!', 'success');
-            
-            setTimeout(() => {
-                this.navigateToApp(token, response.userId, response.userData);
-            }, 1000);
-            
+            // Navigate to app after data load attempt
+            this.navigateToApp(token, response.userId, response.userData, preloadedData);
             return true;
         } else {
             this.showError('Invalid auth token');
@@ -141,12 +169,12 @@ class AuthScreen {
         }
     }
 
-    navigateToApp(token, userId, userData) {
+    navigateToApp(token, userId, userData, preloadedData) {
         const content = document.getElementById('content');
         content.innerHTML = '';
         
-        // Initialize navigation with token, userId, and userData
-        const nav = new Navigation(token, userId, userData);
+        // Initialize navigation with token, userId, userData, and preloadedData
+        const nav = new Navigation(token, userId, userData, preloadedData);
         nav.render();
         
         nav.navigateTo('home');

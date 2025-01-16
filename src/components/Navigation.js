@@ -8,7 +8,7 @@ const Console = require('./Console');
 const MediaViewerScreen = require('../screens/MediaViewerScreen');
 
 class Navigation {
-    constructor(token, userId, userData) {
+    constructor(token, userId, userData, preloadedData = null) {
         this.token = token;
         this.userId = userId;
         this.userData = userData;
@@ -22,7 +22,17 @@ class Navigation {
             { id: 'wipe', label: 'Wipe Account', icon: '🗑️' },
             { id: 'help', label: 'How to Use', icon: '❔' },
         ];
-        console.log("userdata:", userData)
+        
+        // Use provided preloaded data or initialize empty
+        this.preloadedData = preloadedData || {
+            dms: null,
+            servers: null
+        };
+        
+        // Make the navigation instance globally available
+        window.navigationInstance = this;
+        
+        console.log("userdata:", userData);
         if (userData) {
             this.updateUserInfo(userData);
         }
@@ -150,27 +160,47 @@ class Navigation {
         switch(screen) {
             case 'open-dms':
                 Console.show();
-                this.currentScreenInstance = new OpenDMsScreen(this.token, this.userId);
+                this.currentScreenInstance = new OpenDMsScreen(
+                    this.token, 
+                    this.userId,
+                    this.preloadedData
+                );
                 this.currentScreenInstance.render(mainContent);
                 break;
             case 'servers':
                 Console.show();
-                this.currentScreenInstance = new ServersScreen(this.token, this.userId);
+                this.currentScreenInstance = new ServersScreen(
+                    this.token, 
+                    this.userId,
+                    this.preloadedData
+                );
                 this.currentScreenInstance.render(mainContent);
                 break;
             case 'closed-dms':
                 Console.show();
-                this.currentScreenInstance = new ClosedDMsScreen(this.token, this.userId);
+                this.currentScreenInstance = new ClosedDMsScreen(
+                    this.token, 
+                    this.userId,
+                    this.preloadedData
+                );
                 this.currentScreenInstance.render(mainContent);
                 break;
             case 'media-viewer':
                 Console.show();
-                this.currentScreenInstance = new MediaViewerScreen(this.token, this.userId);
+                this.currentScreenInstance = new MediaViewerScreen(
+                    this.token, 
+                    this.userId,
+                    this.preloadedData
+                );
                 this.currentScreenInstance.render(mainContent);
                 break;
             case 'wipe':
                 Console.show();
-                this.currentScreenInstance = new WipeScreen(this.token, this.userId);
+                this.currentScreenInstance = new WipeScreen(
+                    this.token, 
+                    this.userId,
+                    this.preloadedData
+                );
                 this.currentScreenInstance.render(mainContent);
                 break;
             case 'help':

@@ -4,7 +4,7 @@ const DiscordAPI = require('../utils/discord');
 const Store = require('electron-store');
 
 class ServersScreen extends BaseScreen {
-    constructor(token, userId) {
+    constructor(token, userId, preloadedData = null) {
         super(token);
         this.serverQueue = [];
         this.isRunning = false;
@@ -12,6 +12,7 @@ class ServersScreen extends BaseScreen {
         this.operationDelay = 1000;
         this.store = new Store();
         this.api = new DiscordAPI(token, userId);
+        this.preloadedData = preloadedData;
     }
 
     isOperationInProgress() {
@@ -132,14 +133,34 @@ class ServersScreen extends BaseScreen {
         this.loadServers();
     }
 
-    async loadServers() {
+    async loadServers(forceRefresh = false) {
         const serversList = document.getElementById('serversList');
         Console.log('Loading servers...');
 
         try {
             serversList.innerHTML = '<div class="loading">Loading servers...</div>';
 
-            const servers = await this.api.getAllAccessibleServers();
+            // Use preloaded data only on initial load and when not forcing refresh
+            let servers;
+            if (!forceRefresh && this.preloadedData?.servers) {
+                servers = this.preloadedData.servers;
+                Console.log('Using preloaded server data');
+            } else {
+                // Always fetch fresh data from API
+                servers = await this.api.getAllAccessibleServers();
+                // Update preloaded data cache in both this component and the parent Navigation
+                if (this.preloadedData) {
+                    this.preloadedData.servers = servers;
+                    
+                    // Get the Navigation instance from the window
+                    const navigationInstance = window.navigationInstance;
+                    if (navigationInstance?.preloadedData) {
+                        navigationInstance.preloadedData.servers = servers;
+                        Console.log('Updated Navigation preloaded data');
+                    }
+                }
+                Console.log('Fetched fresh server data from API');
+            }
 
             if (!servers || servers.length === 0) {
                 serversList.innerHTML = '<div class="info-message">No accessible servers found.</div>';
@@ -238,7 +259,7 @@ class ServersScreen extends BaseScreen {
         const refreshBtn = container.querySelector('#refreshServersBtn');
         refreshBtn.addEventListener('click', async () => {
             refreshBtn.classList.add('spinning');
-            await this.loadServers();
+            await this.loadServers(true);
             refreshBtn.classList.remove('spinning');
         });
 

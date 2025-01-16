@@ -5,10 +5,14 @@ const Store = require('electron-store');
 const { dialog } = require('@electron/remote');
 
 class MediaViewerScreen extends BaseScreen {
-    constructor(token, userId) {
+    constructor(token, userId, preloadedData = null) {
         super(token);
         this.api = new DiscordAPI(token, userId);
         this.store = new Store();
+        
+        // Store preloaded data if available
+        this.cachedDMs = preloadedData?.dms || null;
+        this.cachedServers = preloadedData?.servers || null;
         
         // Debug log to check stored value
         const storedAutoplay = this.store.get('autoplayVideos', false);
@@ -38,7 +42,7 @@ class MediaViewerScreen extends BaseScreen {
         this.initialMediaList = [];
         this.autoplayDelay = this.loadAutoplayDelaySetting();
         this.lastFetchTime = 0;
-        this.FETCH_COOLDOWN = 1000;
+        this.FETCH_COOLDOWN = 1500;
         this.savedFiles = [];
 
         // Add new setting for duplicate filtering
@@ -97,6 +101,17 @@ class MediaViewerScreen extends BaseScreen {
 
         // Add a new Map to store file hashes
         this.mediaHashes = new Map();
+
+        // Add new state tracking properties
+        this.lastViewState = {
+            type: 'servers', // default to servers
+            scrollPosition: 0,
+            expandedServers: new Set(),
+            searchTerm: ''
+        };
+
+        // Add cache for expanded server channels
+        this.expandedServerChannels = new Map();
     }
 
     // Load volume from store
@@ -142,24 +157,24 @@ class MediaViewerScreen extends BaseScreen {
     }
 
     render(container) {
-        // Initial render with only essential elements
         container.innerHTML = `
             <div class="screen-container media-viewer">
                 <div class="channel-selection">
                     <h1>Media Viewer</h1>
                     <div class="source-buttons">
+                        <button id="selectServer" class="source-btn active">
+                            <span>🖥️</span> Servers
+                        </button>
                         <button id="selectDM" class="source-btn">
                             <span>💬</span> Direct Messages
                         </button>
-                        <button id="selectServer" class="source-btn">
-                            <span>🖥️</span> Servers
-                        </button>
+                        <button id="refreshAll" class="refresh-btn" title="Refresh All">🔄</button>
                     </div>
-                    <div class="search-container">
-                        <span class="search-icon">🔍</span>
-                        <input type="text" id="channelSearch" placeholder="Search channels..." class="search-input">
+                    <div class="channel-search-container">
+                        <span class="channel-search-icon">🔍</span>
+                        <input type="text" id="channelSearch" placeholder="Search channels..." class="channel-search-input">
                     </div>
-                    <div id="channelList" class="channel-list hidden">
+                    <div id="channelList" class="channel-list">
                         <!-- Channels will be loaded here -->
                     </div>
                 </div>
@@ -169,6 +184,9 @@ class MediaViewerScreen extends BaseScreen {
         // Setup initial event listeners
         container.querySelector('#selectDM').addEventListener('click', () => this.loadChannels('dms'));
         container.querySelector('#selectServer').addEventListener('click', () => this.loadChannels('servers'));
+        container.querySelector('#refreshAll').addEventListener('click', async (e) => {
+            await this.refreshAllChannels(e.target);
+        });
         
         // Add search functionality
         const searchInput = container.querySelector('#channelSearch');
@@ -178,6 +196,9 @@ class MediaViewerScreen extends BaseScreen {
 
         // Store container reference for later use
         this.container = container;
+
+        // Use preloaded data only for initial load
+        this.loadChannels('servers');
     }
 
     // Add a new method to initialize media viewer content when needed
@@ -311,13 +332,36 @@ class MediaViewerScreen extends BaseScreen {
         // Media type toggles
         Object.keys(this.mediaTypes).forEach(type => {
             const checkbox = container.querySelector(`#type${type.charAt(0).toUpperCase() + type.slice(1)}`);
-            checkbox.addEventListener('change', (e) => {
+            checkbox.addEventListener('change', async (e) => {
                 this.mediaTypes[type] = e.target.checked;
-                // Clear hashes when filters change
+                
+                // Perform complete reset, similar to selectChannel
+                this.mediaList = [];
+                this.currentIndex = 0;
+                this.currentOffset = 0;
+                this.hasMoreMedia = true;
+                this.mediaCache.clear();
                 this.mediaHashes.clear();
-                Console.log('Media filters changed, cleared hash cache');
+                this.preloadingIndexes.clear();
+                this.savedFiles = [];
+                this.initialMediaList = [];
+                this.clearAutoplayTimer();
+
+                // Clear any existing media display
+                const mediaContent = document.querySelector('#mediaContent');
+                if (mediaContent) {
+                    mediaContent.innerHTML = '<div class="loading">Loading media...</div>';
+                }
+
+                // Reset counter and details
+                document.querySelector('#mediaCounter').textContent = '0/0';
+                document.querySelector('#mediaDetails').textContent = '';
+
+                Console.log('Media filters changed, performing complete reset');
+                
+                // Reload media with new filters
                 if (this.selectedChannel) {
-                    this.loadMedia();
+                    await this.loadMedia();
                 }
             });
         });
@@ -415,8 +459,13 @@ class MediaViewerScreen extends BaseScreen {
 
         try {
             if (type === 'dms') {
-                const dms = await this.api.getAllOpenDMs();
-                const sortedDMs = dms.sort((a, b) => {
+                if (!this.cachedDMs) {
+                    Console.error('No cached DMs available');
+                    channelList.innerHTML = '<div class="error-message">Failed to load channels</div>';
+                    return;
+                }
+                
+                const sortedDMs = this.cachedDMs.sort((a, b) => {
                     const lastA = a.last_message_id ? BigInt(a.last_message_id) : BigInt(0);
                     const lastB = b.last_message_id ? BigInt(b.last_message_id) : BigInt(0);
                     return lastB > lastA ? 1 : lastB < lastA ? -1 : 0;
@@ -430,15 +479,18 @@ class MediaViewerScreen extends BaseScreen {
                     searchText: dm.recipients.map(r => r.username).join(' ').toLowerCase()
                 })));
             } else {
-                const servers = await this.api.getAllAccessibleServers();
+                if (!this.cachedServers) {
+                    Console.error('No cached servers available');
+                    channelList.innerHTML = '<div class="error-message">Failed to load channels</div>';
+                    return;
+                }
                 
-                if (!servers || servers.length === 0) {
+                if (!this.cachedServers || this.cachedServers.length === 0) {
                     channelList.innerHTML = '<div class="info-message">No accessible servers found.</div>';
                     return;
                 }
 
-                // Sort servers by name
-                const sortedServers = servers.sort((a, b) => a.name.localeCompare(b.name));
+                const sortedServers = this.cachedServers.sort((a, b) => a.name.localeCompare(b.name));
                 const serverChannels = sortedServers.map((server, index) => ({
                     id: server.id,
                     name: server.name,
@@ -448,8 +500,13 @@ class MediaViewerScreen extends BaseScreen {
                 }));
 
                 this.renderChannelList(serverChannels);
-                Console.success(`Loaded ${servers.length} servers`);
             }
+
+            // Update button states
+            const dmButton = document.querySelector('#selectDM');
+            const serverButton = document.querySelector('#selectServer');
+            dmButton.classList.toggle('active', type === 'dms');
+            serverButton.classList.toggle('active', type === 'servers');
         } catch (error) {
             Console.error('Error loading channels: ' + error.message);
             channelList.innerHTML = '<div class="error-message">Failed to load channels</div>';
@@ -457,7 +514,6 @@ class MediaViewerScreen extends BaseScreen {
     }
 
     async loadServerChannels(serverId, serverName) {
-        const channelList = document.querySelector('#channelList');
         const serverContainer = document.querySelector(`[data-server-id="${serverId}"]`);
         
         if (!serverContainer) return;
@@ -482,9 +538,36 @@ class MediaViewerScreen extends BaseScreen {
                 <div class="channels-divider">Individual Channels</div>
             `;
 
-            // Get server channels
-            const channels = await this.api.getGuildChannels(serverId);
-            const textChannels = channels
+            let server;
+            
+            // Check if we have cached channels for this server
+            if (this.expandedServerChannels.has(serverId)) {
+                server = this.expandedServerChannels.get(serverId);
+                Console.log(`Using cached channels for server ${serverName}`);
+            } else {
+                // Find the server in cached data
+                server = this.cachedServers.find(s => s.id === serverId);
+                
+                // If server doesn't have channels, fetch them
+                if (!server?.channels) {
+                    Console.log(`Fetching channels for server ${serverName}`);
+                    // Fetch channels from API and cache them
+                    const serverData = await this.api.getGuildChannels(serverId);
+                    server = {
+                        ...server,
+                        channels: serverData
+                    };
+                    // Cache the server channels
+                    this.expandedServerChannels.set(serverId, server);
+                }
+            }
+
+            if (!server || !server.channels) {
+                throw new Error('Server channels not found');
+            }
+
+            // Use channels from either cache or fresh fetch
+            const textChannels = server.channels
                 .filter(channel => channel.type === 0) // 0 is TEXT_CHANNEL
                 .sort((a, b) => a.position - b.position);
 
@@ -593,6 +676,31 @@ class MediaViewerScreen extends BaseScreen {
     }
 
     resetView() {
+        // Add this at the start of resetView to prevent further loading
+        this.isLoading = false;  // Stop any ongoing loading
+        this.hasMoreMedia = false;  // Prevent further loading attempts
+        this.selectedChannel = null;  // Clear selected channel
+
+        // Save current state before resetting
+        const channelListElement = document.querySelector('#channelList');
+        if (channelListElement) {
+            // Save scroll position
+            this.lastViewState.scrollPosition = channelListElement.scrollTop;
+            
+            // Save which view was active
+            this.lastViewState.type = document.querySelector('#selectDM').classList.contains('active') ? 'dms' : 'servers';
+            
+            // Save search term
+            this.lastViewState.searchTerm = document.querySelector('#channelSearch')?.value || '';
+            
+            // Save expanded servers
+            this.lastViewState.expandedServers = new Set(
+                Array.from(document.querySelectorAll('.server-container'))
+                    .filter(container => container.querySelector('.server-channels'))
+                    .map(container => container.dataset.serverId)
+            );
+        }
+
         // Remove keyboard listener
         document.removeEventListener('keydown', this.handleKeyPress.bind(this));
 
@@ -637,6 +745,10 @@ class MediaViewerScreen extends BaseScreen {
         if (searchInput) {
             searchInput.value = '';
         }
+
+        // After showing the channel selection, restore the previous state
+        document.querySelector('.channel-selection').classList.remove('hidden');
+        this.restoreViewState();
     }
 
     escapeHtml(unsafe) {
@@ -848,16 +960,15 @@ class MediaViewerScreen extends BaseScreen {
             if (currentMedia.type === 'video') {
                 displayElement.controls = true;
                 displayElement.volume = this.videoVolume;
-                if (this.autoplayVideos) {
-                    displayElement.autoplay = true;
-                    displayElement.addEventListener('ended', () => {
-                        if (this.autoplayVideos) {
-                            this.navigateMedia(1);
-                        }
-                    });
-                }
+                // Always autoplay videos if autoplay is enabled, regardless of timer
+                displayElement.autoplay = this.autoplayVideos;
+                displayElement.addEventListener('ended', () => {
+                    if (this.autoplayVideos) {
+                        this.navigateMedia(1);
+                    }
+                });
             } else if (this.autoplayVideos) {
-                // Start timer for non-video media
+                // Only start timer for non-video media
                 this.startAutoplayTimer();
             }
 
@@ -953,6 +1064,12 @@ class MediaViewerScreen extends BaseScreen {
     }
 
     async loadMedia(reset = true) {
+        // Add check at the start of loadMedia
+        if (!this.selectedChannel) {
+            Console.log('No channel selected, stopping media load');
+            return;
+        }
+
         // Check if any media types are selected
         const hasActiveFilters = Object.values(this.mediaTypes).some(type => type === true);
         if (!hasActiveFilters) {
@@ -978,13 +1095,23 @@ class MediaViewerScreen extends BaseScreen {
             this.isLoading = true;
             let foundMatchingMedia = false;
             let attempts = 0;
-            const MAX_ATTEMPTS = 20;
+            const MAX_ATTEMPTS = 50;
             const MIN_INITIAL_ITEMS = 5;
 
             while ((!foundMatchingMedia || (reset && this.mediaList.length < MIN_INITIAL_ITEMS)) 
                    && this.hasMoreMedia && attempts < MAX_ATTEMPTS) {
                 
+                // Add delay between concurrent attempts
+                if (attempts > 0) {
+                    const now = Date.now();
+                    const timeSinceLastFetch = now - this.lastFetchTime;
+                    if (timeSinceLastFetch < this.FETCH_COOLDOWN) {
+                        await new Promise(resolve => setTimeout(resolve, this.FETCH_COOLDOWN - timeSinceLastFetch));
+                    }
+                }
+                
                 Console.log(`Fetching media (offset: ${this.currentOffset})...`);
+                this.lastFetchTime = Date.now();
                 
                 let response;
                 if (this.selectedChannel.type === 'server-all') {
@@ -1068,6 +1195,11 @@ class MediaViewerScreen extends BaseScreen {
                 const mediaContent = document.querySelector('#mediaContent');
                 mediaContent.innerHTML = '<div class="no-media">No media found</div>';
                 this.updateMediaCounter();
+            }
+
+            // Add logging when hasMore becomes false
+            if (!this.hasMoreMedia) {
+                Console.warn('Reached the end of available media');
             }
 
         } catch (error) {
@@ -1327,7 +1459,7 @@ class MediaViewerScreen extends BaseScreen {
         const currentMedia = this.mediaList[this.currentIndex];
         if (!currentMedia) return;
 
-        // Don't set timer for videos (they handle their own advancement)
+        // Only set timer for non-video media
         if (currentMedia.type !== 'video') {
             this.autoplayTimer = setTimeout(() => {
                 this.navigateMedia(1);
@@ -1400,6 +1532,88 @@ class MediaViewerScreen extends BaseScreen {
         this.filterDuplicates = state;
         this.store.set('filterDuplicates', state);
         Console.log(`Saving duplicate filter state: ${state}`);
+    }
+
+    // Add new method to handle refreshing all channels
+    async refreshAllChannels(buttonElement) {
+        try {
+            buttonElement.classList.add('spinning');
+            
+            // Clear all caches
+            this.cachedDMs = null;
+            this.cachedServers = null;
+            this.expandedServerChannels.clear(); // Clear expanded server cache
+            
+            // Fetch both in parallel
+            const [dms, servers] = await Promise.all([
+                this.api.getAllOpenDMs(),
+                this.api.getAllAccessibleServers()
+            ]);
+            
+            this.cachedDMs = dms;
+            this.cachedServers = servers;
+            
+            // Update preloaded data in Navigation instance
+            const navigationInstance = window.navigationInstance;
+            if (navigationInstance?.preloadedData) {
+                navigationInstance.preloadedData.dms = dms;
+                navigationInstance.preloadedData.servers = servers;
+                Console.log('Updated Navigation preloaded data');
+            }
+            
+            const currentView = document.querySelector('#selectDM').classList.contains('active') ? 'dms' : 'servers';
+            await this.loadChannels(currentView);
+            
+            Console.success('Successfully refreshed all channels');
+        } catch (error) {
+            Console.error(`Failed to refresh channels: ${error.message}`);
+        } finally {
+            buttonElement.classList.remove('spinning');
+        }
+    }
+
+    // Add new method to restore the view state
+    async restoreViewState() {
+        // Load the correct view type
+        await this.loadChannels(this.lastViewState.type);
+        
+        // Update active button state
+        const dmButton = document.querySelector('#selectDM');
+        const serverButton = document.querySelector('#selectServer');
+        dmButton.classList.toggle('active', this.lastViewState.type === 'dms');
+        serverButton.classList.toggle('active', this.lastViewState.type === 'servers');
+        
+        // Restore search term if any
+        const searchInput = document.querySelector('#channelSearch');
+        if (searchInput && this.lastViewState.searchTerm) {
+            searchInput.value = this.lastViewState.searchTerm;
+            this.filterChannels(this.lastViewState.searchTerm.toLowerCase());
+        }
+        
+        // If we're in server view and have expanded servers, restore them
+        if (this.lastViewState.type === 'servers' && this.lastViewState.expandedServers.size > 0) {
+            for (const serverId of this.lastViewState.expandedServers) {
+                const serverContainer = document.querySelector(`[data-server-id="${serverId}"]`);
+                if (serverContainer) {
+                    const serverHeader = serverContainer.querySelector('.server-header');
+                    const serverName = serverHeader.dataset.serverName;
+                    await this.loadServerChannels(serverId, serverName);
+                    const expandIcon = serverHeader.querySelector('.server-expand');
+                    if (expandIcon) {
+                        expandIcon.textContent = '▲';
+                    }
+                }
+            }
+        }
+        
+        // Restore scroll position after a short delay to ensure content is rendered
+        const channelList = document.querySelector('#channelList');
+        if (channelList) {
+            // Use requestAnimationFrame for smoother scrolling
+            requestAnimationFrame(() => {
+                channelList.scrollTop = this.lastViewState.scrollPosition;
+            });
+        }
     }
 }
 

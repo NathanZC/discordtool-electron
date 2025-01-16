@@ -159,25 +159,14 @@ ipcMain.on('batch-download-files', (event, { files }) => {
         item.on('done', (_, state) => {
             completedDownloads++;
             
-            if (state === 'completed') {
-                // Update progress
-                win.webContents.send('update-progress', {
-                    message: `Downloading: ${completedDownloads}/${totalFiles} files (${Math.round(completedDownloads/totalFiles * 100)}%)`
-                });
-            } else {
-                win.webContents.send('log-to-console', {
-                    message: `Failed to download: ${file.filename}`,
-                    type: 'error'
-                });
-            }
+            // Update progress
+            win.webContents.send('update-progress', {
+                message: `Downloading: ${completedDownloads}/${totalFiles} files (${Math.round(completedDownloads/totalFiles * 100)}%)`
+            });
 
             // Check if all downloads are complete
             if (completedDownloads === totalFiles) {
                 win.webContents.send('clear-progress');
-                win.webContents.send('log-to-console', {
-                    message: `Batch download complete! Downloaded ${completedDownloads} files.`,
-                    type: 'success'
-                });
             }
         });
     });
@@ -196,20 +185,6 @@ ipcMain.on('download-file', (event, { url, filename, saveLocation }) => {
     win.webContents.session.on('will-download', (event, item, webContents) => {
         const filePath = path.join(saveLocation, filename);
         item.setSavePath(filePath);
-
-        item.on('done', (_, state) => {
-            if (state === 'completed') {
-                win.webContents.send('log-to-console', {
-                    message: `Downloaded: ${filename}`,
-                    type: 'success'
-                });
-            } else {
-                win.webContents.send('log-to-console', {
-                    message: `Failed to download: ${filename}`,
-                    type: 'error'
-                });
-            }
-        });
     });
 
     win.webContents.downloadURL(url);

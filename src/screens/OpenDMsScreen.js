@@ -4,7 +4,7 @@ const DiscordAPI = require('../utils/discord');
 const Store = require('electron-store');
 
 class OpenDMsScreen extends BaseScreen {
-    constructor(token, userId) {
+    constructor(token, userId, preloadedData = null) {
         super(token);
         this.dmQueue = [];
         this.isRunning = false;
@@ -13,6 +13,7 @@ class OpenDMsScreen extends BaseScreen {
         this.store = new Store();
         this.api = new DiscordAPI(token, userId);
         this.channelData = new Map();
+        this.preloadedData = preloadedData;
     }
 
     isOperationInProgress() {
@@ -193,7 +194,7 @@ class OpenDMsScreen extends BaseScreen {
         const refreshBtn = container.querySelector('#refreshDMsBtn');
         refreshBtn.addEventListener('click', async () => {
             refreshBtn.classList.add('spinning');
-            await this.loadDMs();
+            await this.loadDMs(true);
             refreshBtn.classList.remove('spinning');
         });
 
@@ -291,14 +292,35 @@ class OpenDMsScreen extends BaseScreen {
         }
     }
 
-    async loadDMs() {
+    async loadDMs(forceRefresh = false) {
         const dmsList = document.getElementById('dmsList');
         Console.log('Loading DM channels...');
 
         try {
             dmsList.innerHTML = '<div class="loading">Loading DM channels...</div>';
 
-            const dms = await this.api.getAllOpenDMs();
+            // Use preloaded data only on initial load and when not forcing refresh
+            let dms;
+            if (!forceRefresh && this.preloadedData?.dms) {
+                dms = this.preloadedData.dms;
+                Console.log('Using preloaded DM data');
+            } else {
+                // Always fetch fresh data from API
+                dms = await this.api.getAllOpenDMs();
+                
+                // Update preloaded data cache in both this component and the parent Navigation
+                if (this.preloadedData) {
+                    this.preloadedData.dms = dms;
+                    
+                    // Get the Navigation instance from the window
+                    const navigationInstance = window.navigationInstance;
+                    if (navigationInstance?.preloadedData) {
+                        navigationInstance.preloadedData.dms = dms;
+                        Console.log('Updated Navigation preloaded data');
+                    }
+                }
+                Console.log('Fetched fresh DM data from API');
+            }
 
             if (!dms || dms.length === 0) {
                 dmsList.innerHTML = '<div class="info-message">No open DMs found.</div>';

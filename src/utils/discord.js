@@ -1049,6 +1049,15 @@ class DiscordAPI {
             const response = await this.makeRequest(`/guilds/${guildId}/messages/search?${params}`);
             
             if (!response.ok) {
+                const errorData = await response.json();
+                if (errorData.code === 50001) {
+                    Console.error('Missing access to this channel. You may not have permission to view its contents.');
+                    throw {
+                        code: 50001,
+                        message: 'Missing Access',
+                        userMessage: 'You do not have permission to view this channel\'s contents.'
+                    };
+                }
                 throw new Error(`Failed to fetch guild media: ${response.status}`);
             }
 
@@ -1111,6 +1120,17 @@ class DiscordAPI {
                 }
             }
 
+            if (mediaItems.length === 0 && !data.total_results) {
+                Console.log('No media found in this channel.');
+                return {
+                    media: [],
+                    total: 0,
+                    hasMore: false,
+                    offset: offset,
+                    noMediaFound: true
+                };
+            }
+
             Console.log(`Found ${mediaItems.length} media items${channelId ? ' in channel' : ''} (offset: ${offset})`);
             return {
                 media: mediaItems,
@@ -1149,6 +1169,15 @@ class DiscordAPI {
             const response = await this.makeRequest(`/channels/${channelId}/messages/search?${params}`);
             
             if (!response.ok) {
+                const errorData = await response.json();
+                if (errorData.code === 50001) {
+                    Console.error('Missing access to this DM. The user may have blocked you or the channel was deleted.');
+                    throw {
+                        code: 50001,
+                        message: 'Missing Access',
+                        userMessage: 'Cannot access this DM. The user may have blocked you or the channel was deleted.'
+                    };
+                }
                 throw new Error(`Failed to fetch DM media: ${response.status}`);
             }
 
@@ -1209,6 +1238,17 @@ class DiscordAPI {
                         }
                     }
                 }
+            }
+
+            if (mediaItems.length === 0 && !data.total_results) {
+                Console.log('No media found in this DM.');
+                return {
+                    media: [],
+                    total: 0,
+                    hasMore: false,
+                    offset: offset,
+                    noMediaFound: true
+                };
             }
 
             return {

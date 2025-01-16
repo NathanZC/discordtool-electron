@@ -10,7 +10,7 @@ class WipeScreen extends BaseScreen {
         COMPLETE: 'complete'
     };
 
-    constructor(token, userId) {
+    constructor(token, userId, preloadedData = null) {
         super(token);
         this.api = new DiscordAPI(token, userId);
         this.channels = new Map();
@@ -18,6 +18,7 @@ class WipeScreen extends BaseScreen {
         this.openDMs = new Set();
         this.isRunning = false;
         this.isCountingMessages = false;
+        this.preloadedData = preloadedData;
         
         // Initialize channel states for current user
         this.channelStates = this.loadChannelStates();
@@ -29,7 +30,7 @@ class WipeScreen extends BaseScreen {
         }
 
         // Load open DMs when screen initializes and re-render the list
-        this.loadOpenDMs().then(() => {
+        this.loadOpenDMs(false).then(() => {
             this.renderChannelsList();
         });
     }
@@ -569,7 +570,7 @@ class WipeScreen extends BaseScreen {
         const refreshBtn = container.querySelector('#refreshDMsBtn');
         refreshBtn.addEventListener('click', async () => {
             refreshBtn.classList.add('spinning');
-            await this.loadOpenDMs();
+            await this.loadOpenDMs(true);
             this.renderChannelsList();
             refreshBtn.classList.remove('spinning');
         });
@@ -920,13 +921,32 @@ class WipeScreen extends BaseScreen {
     }
 
     // Add this method
-    async loadOpenDMs() {
+    async loadOpenDMs(forceRefresh = false) {
         try {
-            const dms = await this.api.getAllOpenDMs();
-            // Clear and repopulate the Set with channel IDs
-            this.openDMs.clear();
-            dms.forEach(dm => this.openDMs.add(dm.id));
-            Console.log(`Loaded ${this.openDMs.size} open DM channels`);
+            // Use preloaded data if available and not forcing refresh
+            if (!forceRefresh && this.preloadedData?.dms) {
+                const dms = this.preloadedData.dms;
+                this.openDMs.clear();
+                dms.forEach(dm => this.openDMs.add(dm.id));
+                Console.log(`Loaded ${this.openDMs.size} open DM channels from preloaded data`);
+            } else {
+                // Fetch fresh data from API
+                const dms = await this.api.getAllOpenDMs();
+                this.openDMs.clear();
+                dms.forEach(dm => this.openDMs.add(dm.id));
+                // Update preloaded data cache in both this component and the parent Navigation
+                if (this.preloadedData) {
+                    this.preloadedData.dms = dms;
+                    
+                    // Get the Navigation instance from the window
+                    const navigationInstance = window.navigationInstance;
+                    if (navigationInstance?.preloadedData) {
+                        navigationInstance.preloadedData.dms = dms;
+                        Console.log('Updated Navigation preloaded data');
+                    }
+                }
+                Console.log(`Loaded ${this.openDMs.size} open DM channels from API`);
+            }
         } catch (error) {
             Console.error('Error loading open DMs: ' + error.message);
         }

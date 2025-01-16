@@ -27,6 +27,8 @@
     gap: 15px;
     margin: 20px 0;
     justify-content: center;
+    align-items: center;
+    position: relative;
 }
 
 .source-btn {
@@ -56,12 +58,12 @@
     transform: translateY(0);
 }
 
-.search-container {
+.channel-search-container {
     position: relative;
     margin: 25px 0;
 }
 
-.search-input {
+.channel-search-input {
     width: 100%;
     padding: 12px 40px;
     background: #202225;
@@ -72,17 +74,17 @@
     transition: all 0.2s ease;
 }
 
-.search-input:focus {
+.channel-search-input:focus {
     outline: none;
     border-color: #5865F2;
     box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.3);
 }
 
-.search-input::placeholder {
+.channel-search-input::placeholder {
     color: #72767D;
 }
 
-.search-icon {
+.channel-search-icon {
     position: absolute;
     left: 12px;
     top: 50%;
@@ -470,13 +472,6 @@
     font-style: italic;
 }
 
-/* New container for just the media type checkboxes */
-.media-type-checkboxes {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
 /* Place autoplay controls in middle column */
 .autoplay-controls {
     display: flex;
@@ -505,4 +500,17 @@
     display: flex;
     align-items: center;
     gap: 8px;
-} 
+}
+
+.source-btn.active {
+    background: #5865F2;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Add these styles for the refresh buttons */
+.source-btn-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
