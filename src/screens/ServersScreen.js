@@ -144,7 +144,6 @@ class ServersScreen extends BaseScreen {
             let servers;
             if (!forceRefresh && this.preloadedData?.servers) {
                 servers = this.preloadedData.servers;
-                Console.log('Using preloaded server data');
             } else {
                 // Always fetch fresh data from API
                 servers = await this.api.getAllAccessibleServers();
@@ -156,7 +155,6 @@ class ServersScreen extends BaseScreen {
                     const navigationInstance = window.navigationInstance;
                     if (navigationInstance?.preloadedData) {
                         navigationInstance.preloadedData.servers = servers;
-                        Console.log('Updated Navigation preloaded data');
                     }
                 }
                 Console.log('Fetched fresh server data from API');

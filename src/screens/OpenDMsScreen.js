@@ -294,8 +294,6 @@ class OpenDMsScreen extends BaseScreen {
 
     async loadDMs(forceRefresh = false) {
         const dmsList = document.getElementById('dmsList');
-        Console.log('Loading DM channels...');
-
         try {
             dmsList.innerHTML = '<div class="loading">Loading DM channels...</div>';
 
@@ -303,7 +301,6 @@ class OpenDMsScreen extends BaseScreen {
             let dms;
             if (!forceRefresh && this.preloadedData?.dms) {
                 dms = this.preloadedData.dms;
-                Console.log('Using preloaded DM data');
             } else {
                 // Always fetch fresh data from API
                 dms = await this.api.getAllOpenDMs();
@@ -316,7 +313,6 @@ class OpenDMsScreen extends BaseScreen {
                     const navigationInstance = window.navigationInstance;
                     if (navigationInstance?.preloadedData) {
                         navigationInstance.preloadedData.dms = dms;
-                        Console.log('Updated Navigation preloaded data');
                     }
                 }
                 Console.log('Fetched fresh DM data from API');

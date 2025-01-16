@@ -1039,7 +1039,6 @@ class DiscordAPI {
                 params.append('channel_id', channelId);
             }
             
-            params.append('content', '');
             params.append('include_nsfw', 'true');
             params.append('has', 'file');
             

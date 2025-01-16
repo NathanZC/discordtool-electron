@@ -928,7 +928,7 @@ class WipeScreen extends BaseScreen {
                 const dms = this.preloadedData.dms;
                 this.openDMs.clear();
                 dms.forEach(dm => this.openDMs.add(dm.id));
-                Console.log(`Loaded ${this.openDMs.size} open DM channels from preloaded data`);
+                Console.success(`Loaded ${this.openDMs.size} open DM channels from preloaded data`);
             } else {
                 // Fetch fresh data from API
                 const dms = await this.api.getAllOpenDMs();
@@ -942,10 +942,9 @@ class WipeScreen extends BaseScreen {
                     const navigationInstance = window.navigationInstance;
                     if (navigationInstance?.preloadedData) {
                         navigationInstance.preloadedData.dms = dms;
-                        Console.log('Updated Navigation preloaded data');
                     }
                 }
-                Console.log(`Loaded ${this.openDMs.size} open DM channels from API`);
+                Console.success(`Loaded ${this.openDMs.size} open DM channels from API`);
             }
         } catch (error) {
             Console.error('Error loading open DMs: ' + error.message);

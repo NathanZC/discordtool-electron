@@ -16,8 +16,6 @@ class MediaViewerScreen extends BaseScreen {
         
         // Debug log to check stored value
         const storedAutoplay = this.store.get('autoplayVideos', false);
-        Console.log(`Loading stored autoplay state: ${storedAutoplay}`);
-        
         this.selectedChannel = null;
         this.mediaList = [];
         this.currentIndex = 0;
@@ -112,6 +110,12 @@ class MediaViewerScreen extends BaseScreen {
 
         // Add cache for expanded server channels
         this.expandedServerChannels = new Map();
+
+        // Add new property to track all known content hashes
+        this.knownContentHashes = new Map(); // url -> { hash, filename }
+
+        // Add property to track keyboard listener
+        this.keyboardListener = null;
     }
 
     // Load volume from store
@@ -146,7 +150,6 @@ class MediaViewerScreen extends BaseScreen {
     saveAutoplayState(state) {
         this.autoplayVideos = state;
         this.store.set('autoplayVideos', state);
-        Console.log(`Saving autoplay state: ${state}`); // Debug log
     }
 
     // Update toggleAutoplay method if you have one
@@ -291,8 +294,14 @@ class MediaViewerScreen extends BaseScreen {
         this.container.querySelector('.screen-container').appendChild(mediaViewerContent);
         this.setupMediaEventListeners(this.container);
 
-        // Add keyboard navigation
-        document.addEventListener('keydown', this.handleKeyPress.bind(this));
+        // Remove any existing keyboard listener before adding a new one
+        if (this.keyboardListener) {
+            document.removeEventListener('keydown', this.keyboardListener);
+        }
+
+        // Create bound listener and store reference
+        this.keyboardListener = this.handleKeyPress.bind(this);
+        document.addEventListener('keydown', this.keyboardListener);
 
         // Add resize listener for window
         window.addEventListener('resize', () => {
@@ -363,7 +372,26 @@ class MediaViewerScreen extends BaseScreen {
         Object.keys(this.mediaTypes).forEach(type => {
             const checkbox = container.querySelector(`#type${type.charAt(0).toUpperCase() + type.slice(1)}`);
             checkbox.addEventListener('change', async (e) => {
+                // If currently loading, prevent change and revert checkbox
+                if (this.isLoading) {
+                    Console.warn('Please wait for current loading to complete before changing media filters');
+                    // Revert checkbox to previous state
+                    e.target.checked = this.mediaTypes[type];
+                    return;
+                }
+
+                // Update the media type state
                 this.mediaTypes[type] = e.target.checked;
+                
+                // Check if at least one filter is enabled
+                const hasEnabledFilter = Object.values(this.mediaTypes).some(enabled => enabled);
+                if (!hasEnabledFilter) {
+                    Console.warn('At least one media type must be selected');
+                    // Revert the checkbox state
+                    e.target.checked = true;
+                    this.mediaTypes[type] = true;
+                    return;
+                }
                 
                 // Perform complete reset, similar to selectChannel
                 this.mediaList = [];
@@ -391,7 +419,14 @@ class MediaViewerScreen extends BaseScreen {
                 
                 // Reload media with new filters
                 if (this.selectedChannel) {
-                    await this.loadMedia();
+                    try {
+                        await this.loadMedia();
+                    } catch (error) {
+                        Console.error('Error reloading media after filter change:', error);
+                        // Revert the checkbox state if loading fails
+                        this.mediaTypes[type] = !e.target.checked;
+                        e.target.checked = !e.target.checked;
+                    }
                 }
             });
         });
@@ -465,20 +500,17 @@ class MediaViewerScreen extends BaseScreen {
             }
         });
 
-        // Add duplicate filter toggle listener
+        // Update duplicate filter toggle listener
         const filterDuplicatesCheckbox = container.querySelector('#filterDuplicates');
-        filterDuplicatesCheckbox.addEventListener('change', async (e) => {
-            this.saveFilterDuplicatesState(e.target.checked);
-            if (this.selectedChannel) {
-                // Reset and reload media with new filter setting
-                this.mediaList = [];
-                this.currentIndex = 0;
-                this.currentOffset = 0;
-                this.hasMoreMedia = true;
-                this.mediaCache.clear();
-                this.mediaHashes.clear();
-                await this.loadMedia();
+        filterDuplicatesCheckbox.addEventListener('change', (e) => {
+            // Debounce the change event
+            if (this.filterChangeTimeout) {
+                clearTimeout(this.filterChangeTimeout);
             }
+            
+            this.filterChangeTimeout = setTimeout(() => {
+                this.saveFilterDuplicatesState(e.target.checked);
+            }, 100); // Small delay to prevent multiple rapid toggles
         });
     }
 
@@ -573,14 +605,12 @@ class MediaViewerScreen extends BaseScreen {
             // Check if we have cached channels for this server
             if (this.expandedServerChannels.has(serverId)) {
                 server = this.expandedServerChannels.get(serverId);
-                Console.log(`Using cached channels for server ${serverName}`);
             } else {
                 // Find the server in cached data
                 server = this.cachedServers.find(s => s.id === serverId);
                 
                 // If server doesn't have channels, fetch them
                 if (!server?.channels) {
-                    Console.log(`Fetching channels for server ${serverName}`);
                     // Fetch channels from API and cache them
                     const serverData = await this.api.getGuildChannels(serverId);
                     server = {
@@ -732,7 +762,10 @@ class MediaViewerScreen extends BaseScreen {
         }
 
         // Remove keyboard listener
-        document.removeEventListener('keydown', this.handleKeyPress.bind(this));
+        if (this.keyboardListener) {
+            document.removeEventListener('keydown', this.keyboardListener);
+            this.keyboardListener = null;
+        }
 
         // Stop any playing videos
         const currentVideo = document.querySelector('#mediaContent video');
@@ -790,156 +823,6 @@ class MediaViewerScreen extends BaseScreen {
             .replace(/'/g, "&#039;");
     }
 
-    async preloadMedia(mediaItem) {
-        if (!mediaItem?.url) {
-            return null;
-        }
-
-        if (this.mediaCache.has(mediaItem.url)) {
-            return this.mediaCache.get(mediaItem.url);
-        }
-
-        try {
-            const response = await fetch(mediaItem.url, {
-                referrer: "https://discord.com",
-                referrerPolicy: "no-referrer-when-downgrade",
-                headers: {
-                    'Accept': 'image/webp,image/*,video/*,*/*',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const blob = await response.blob();
-            
-            // Only calculate and store hash if duplicate filtering is enabled
-            if (this.filterDuplicates) {
-                const arrayBuffer = await blob.arrayBuffer();
-                const hashBuffer = await crypto.subtle.digest('SHA-1', arrayBuffer);
-                const hashArray = Array.from(new Uint8Array(hashBuffer));
-                const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-                this.mediaHashes.set(mediaItem.url, hashHex);
-            }
-
-            const objectUrl = URL.createObjectURL(blob);
-
-            return new Promise((resolve) => {
-                try {
-                    if (mediaItem.type === 'video') {
-                        const video = document.createElement('video');
-                        video.addEventListener('loadeddata', () => {
-                            this.mediaCache.set(mediaItem.url, video);
-                            resolve(video);
-                        });
-                        
-                        video.addEventListener('error', () => {
-                            URL.revokeObjectURL(objectUrl);
-                            this.mediaCache.set(mediaItem.url, null);
-                            resolve(null);
-                        });
-                        
-                        video.src = objectUrl;
-                        video.preload = 'auto';
-                    } else {
-                        const img = new Image();
-                        
-                        img.onload = () => {
-                            this.mediaCache.set(mediaItem.url, img);
-                            resolve(img);
-                        };
-                        
-                        img.onerror = () => {
-                            URL.revokeObjectURL(objectUrl);
-                            this.mediaCache.set(mediaItem.url, null);
-                            resolve(null);
-                        };
-
-                        img.src = objectUrl;
-                    }
-                } catch (error) {
-                    URL.revokeObjectURL(objectUrl);
-                    this.mediaCache.set(mediaItem.url, null);
-                    resolve(null);
-                }
-            });
-
-        } catch (error) {
-            this.mediaCache.set(mediaItem.url, null);
-            return null;
-        }
-    }
-
-    async preloadBatch(startIndex, count = 5) {
-        // If we have few items total or we're approaching the end, fetch more
-        if ((this.mediaList.length < 15 || 
-             this.mediaList.length - startIndex <= 25) && 
-            this.hasMoreMedia && 
-            !this.isLoading) {
-            await this.loadMedia(false);
-        }
-
-        const endIndex = Math.min(startIndex + count, this.mediaList.length);
-        const preloadPromises = [];
-        // Only create duplicates set if filtering is enabled
-        const duplicates = this.filterDuplicates ? new Set() : null;
-
-        for (let i = startIndex; i < endIndex; i++) {
-            const mediaItem = this.mediaList[i];
-            if (!this.preloadingIndexes.has(i) && !this.mediaCache.has(mediaItem?.url)) {
-                this.preloadingIndexes.add(i);
-                
-                // Wrap each preload in a promise that also checks for duplicates
-                const promise = this.preloadMedia(mediaItem)
-                    .then(async () => {
-                        // Only check for duplicates if filtering is enabled
-                        if (this.filterDuplicates && duplicates) {
-                            const currentHash = this.mediaHashes.get(mediaItem.url);
-                            if (currentHash) {
-                                for (const [existingUrl, existingHash] of this.mediaHashes.entries()) {
-                                    if (existingUrl !== mediaItem.url && existingHash === currentHash) {
-                                        Console.log(`Found duplicate content: ${mediaItem.filename} matches ${existingUrl}`);
-                                        duplicates.add(mediaItem.url);
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    })
-                    .finally(() => {
-                        this.preloadingIndexes.delete(i);
-                    });
-
-                preloadPromises.push(promise);
-            }
-        }
-
-        if (preloadPromises.length > 0) {
-            try {
-                await Promise.all(preloadPromises);
-                
-                // Only remove duplicates if filtering is enabled and duplicates were found
-                if (this.filterDuplicates && duplicates && duplicates.size > 0) {
-                    const oldLength = this.mediaList.length;
-                    this.mediaList = this.mediaList.filter(item => !duplicates.has(item.url));
-                    Console.log(`Removed ${duplicates.size} duplicates`);
-                    
-                    // Adjust currentIndex if needed
-                    if (this.currentIndex >= this.mediaList.length) {
-                        this.currentIndex = Math.max(0, this.mediaList.length - 1);
-                        await this.displayCurrentMedia();
-                    } else {
-                        this.updateMediaCounter();
-                    }
-                }
-            } catch (error) {
-                Console.error('Error during preload batch:', error);
-            }
-        }
-    }
-
     async displayCurrentMedia() {
         if (!this.mediaList.length) return;
 
@@ -967,22 +850,13 @@ class MediaViewerScreen extends BaseScreen {
             }
             mediaContent.innerHTML = '';
 
-            // Try to get from cache first
-            let element = this.mediaCache.get(currentMedia.url);
+            // Get cached element
+            const element = this.mediaCache.get(currentMedia.url);
             
             if (!element) {
-                // Show loading state
-                mediaContent.innerHTML = '<div class="loading">Loading media...</div>';
-                // If not in cache, load and cache it
-                element = await this.preloadMedia(currentMedia);
-                if (!element) {
-                    mediaContent.innerHTML = '<div class="error">Failed to load media</div>';
-                    return;
-                }
+                mediaContent.innerHTML = '<div class="error">Failed to load media</div>';
+                return;
             }
-            
-            // Clear loading state
-            mediaContent.innerHTML = '';
             
             // Clone the cached element to prevent issues with multiple displays
             const displayElement = element.cloneNode(true);
@@ -990,7 +864,6 @@ class MediaViewerScreen extends BaseScreen {
             if (currentMedia.type === 'video') {
                 displayElement.controls = true;
                 displayElement.volume = this.videoVolume;
-                // Always autoplay videos if autoplay is enabled, regardless of timer
                 displayElement.autoplay = this.autoplayVideos;
                 displayElement.addEventListener('ended', () => {
                     if (this.autoplayVideos) {
@@ -1017,7 +890,7 @@ class MediaViewerScreen extends BaseScreen {
 
             // Wait for element to be loaded before observing
             if (currentMedia.type === 'video') {
-                if (displayElement.readyState >= 2) { // HAVE_CURRENT_DATA or better
+                if (displayElement.readyState >= 2) {
                     this.currentResizeObserver.observe(mediaContent);
                     this.adjustMediaSize(displayElement, currentMedia);
                 } else {
@@ -1037,9 +910,6 @@ class MediaViewerScreen extends BaseScreen {
                     });
                 }
             }
-
-            // Preload next few items in the background
-            this.preloadBatch(this.currentIndex + 1);
 
         } catch (error) {
             Console.error('Error displaying media:', error);
@@ -1094,39 +964,29 @@ class MediaViewerScreen extends BaseScreen {
     }
 
     async loadMedia(reset = true) {
-        // Add check at the start of loadMedia
         if (!this.selectedChannel) {
             Console.log('No channel selected, stopping media load');
             return;
         }
 
-        // Check if any media types are selected
-        const hasActiveFilters = Object.values(this.mediaTypes).some(type => type === true);
-        if (!hasActiveFilters) {
-            Console.log('No media types selected, skipping media load');
-            const mediaContent = document.querySelector('#mediaContent');
-            mediaContent.innerHTML = '<div class="no-media">No media types selected</div>';
-            document.querySelector('#mediaCounter').textContent = '0/0';
-            document.querySelector('#mediaDetails').textContent = '';
+        if (!reset && !this.hasMoreMedia) {
+            Console.log('Already reached end of media, stopping load');
             return;
         }
 
-        if (reset) {
-            this.currentOffset = 0;
-            this.mediaList = [];
-            this.currentIndex = 0;
-            this.hasMoreMedia = true;
-            this.initialMediaList = [];
-        }
-
-        if (!this.hasMoreMedia || this.isLoading) return;
+        // Create a progress entry for every load
+        let progressEntry = Console.progress('Loading media...');
 
         try {
             this.isLoading = true;
             let foundMatchingMedia = false;
             let attempts = 0;
-            const MAX_ATTEMPTS = 50;
-            const MIN_INITIAL_ITEMS = 5;
+            const MAX_ATTEMPTS = 100;
+            const MIN_INITIAL_ITEMS = 10;
+            
+            // Track total processed items for progress
+            let totalProcessed = 0;
+            let batchSize = 0;
 
             while ((!foundMatchingMedia || (reset && this.mediaList.length < MIN_INITIAL_ITEMS)) 
                    && this.hasMoreMedia && attempts < MAX_ATTEMPTS) {
@@ -1140,7 +1000,6 @@ class MediaViewerScreen extends BaseScreen {
                     }
                 }
                 
-                Console.log(`Fetching media (offset: ${this.currentOffset})...`);
                 this.lastFetchTime = Date.now();
                 
                 let response;
@@ -1171,71 +1030,174 @@ class MediaViewerScreen extends BaseScreen {
                     );
                 }
 
-                if (reset && this.initialMediaList.length === 0) {
-                    this.initialMediaList = [...response.media];
-                }
-
                 this.hasMoreMedia = response.hasMore;
                 this.currentOffset = response.offset;
-                this.totalResults = response.total;
 
-                if (response.media.length > 0) {
-                    // Always filter URL duplicates
-                    const urlFilteredMedia = response.media.filter(item => 
-                        !this.mediaList.some(existing => existing.url === item.url)
-                    );
+                if (!response.media?.length) {
+                    attempts++;
+                    continue;
+                }
 
-                    if (urlFilteredMedia.length > 0) {
-                        let newMedia = urlFilteredMedia;
+                // Step 1: Filter URL duplicates
+                const urlFilteredMedia = response.media.filter(item => {
+                    const isDuplicate = this.mediaList.some(existing => existing.url === item.url);
+                    return !isDuplicate;
+                });
 
-                        if (this.filterDuplicates) {
-                            const duplicates = await this.processHashesInBackground(urlFilteredMedia);
-                            newMedia = urlFilteredMedia.filter(item => 
-                                !duplicates.some(dup => dup.url === item.url)
-                            );
+                if (urlFilteredMedia.length > 0) {
+                    batchSize = urlFilteredMedia.length;
+                    Console.updateProgress(progressEntry, 
+                        `Processing new batch of media... (0/${batchSize} items)`);
 
-                            if (duplicates.length > 0) {
-                                Console.log(`Filtered out ${duplicates.length} duplicate items`);
+                    // Step 2: Cache all items and generate hashes if needed
+                    for (const item of urlFilteredMedia) {
+                        try {
+                            totalProcessed++;
+                            
+                            Console.updateProgress(progressEntry, 
+                                `Processing new batch of media... (${totalProcessed}/${batchSize} items)`);
+
+                            if (this.mediaCache.has(item.url)) {
+                                continue;
+                            }
+
+                            const response = await fetch(item.url, {
+                                referrer: "https://discord.com",
+                                referrerPolicy: "no-referrer-when-downgrade",
+                            });
+                            
+                            if (!response.ok) {
+                                Console.error(`Failed to fetch ${item.filename}`);
+                                continue;
+                            }
+
+                            const blob = await response.blob();
+                            const objectUrl = URL.createObjectURL(blob);
+
+                            // Generate hash if duplicate filtering is enabled
+                            if (this.filterDuplicates) {
+                                try {
+                                    const arrayBuffer = await blob.arrayBuffer();
+                                    const data = new Uint8Array(arrayBuffer);
+                                    const hashValue = crc32(data).toString(16).padStart(8, '0');
+                                    
+                                    this.mediaHashes.set(item.url, hashValue);
+                                    this.knownContentHashes.set(item.url, {
+                                        hash: hashValue,
+                                        filename: item.filename
+                                    });
+                                } catch (error) {
+                                    Console.warn(`Failed to generate hash for ${item.filename}: ${error.message}`);
+                                    this.mediaHashes.set(item.url, null);
+                                    this.knownContentHashes.set(item.url, {
+                                        hash: null,
+                                        filename: item.filename
+                                    });
+                                }
+                            }
+
+                            // Cache the media
+                            if (item.type === 'video') {
+                                const video = document.createElement('video');
+                                await new Promise((resolve) => {
+                                    video.onloadeddata = () => resolve();
+                                    video.onerror = () => resolve();
+                                    video.src = objectUrl;
+                                    video.preload = 'auto';
+                                });
+                                this.mediaCache.set(item.url, video);
+                            } else {
+                                const img = new Image();
+                                await new Promise((resolve) => {
+                                    img.onload = () => resolve();
+                                    img.onerror = () => resolve();
+                                    img.src = objectUrl;
+                                });
+                                this.mediaCache.set(item.url, img);
+                            }
+                            
+                        } catch (error) {
+                            Console.error(`Error processing ${item.filename}: ${error.message}`);
+                            this.mediaCache.set(item.url, null);
+                            if (this.filterDuplicates) {
+                                this.mediaHashes.set(item.url, null);
+                                this.knownContentHashes.delete(item.url);
+                            }
+                        }
+                    }
+
+                    let newMedia;
+                    
+                    // Step 3: Filter content duplicates if enabled
+                    if (this.filterDuplicates) {
+                        const newUniqueMedia = [];
+                        const seenHashes = new Set();
+
+                        // Add existing hashes to set
+                        for (const existingItem of this.mediaList) {
+                            const knownContent = this.knownContentHashes.get(existingItem.url);
+                            if (knownContent?.hash) {
+                                seenHashes.add(knownContent.hash);
                             }
                         }
 
-                        if (newMedia.length > 0) {
-                            this.mediaList.push(...newMedia);
-                            
-                            if (reset) {
-                                this.currentIndex = 0;
-                                await this.displayCurrentMedia();
-                            } else {
-                                // Don't modify currentIndex, just update the counter
-                                this.updateMediaCounter();
+                        // Process new items
+                        for (const item of urlFilteredMedia) {
+                            const knownContent = this.knownContentHashes.get(item.url);
+                            if (!knownContent?.hash) {
+                                newUniqueMedia.push(item); // Include items without hashes
+                                continue;
                             }
-                            foundMatchingMedia = true;
 
-                            // Start preloading the new items
-                            this.preloadBatch(this.mediaList.length - newMedia.length, newMedia.length);
+                            if (!seenHashes.has(knownContent.hash)) {
+                                newUniqueMedia.push(item);
+                                seenHashes.add(knownContent.hash);
+                            } else {
+                                const matchingItem = Array.from(this.knownContentHashes.values())
+                                    .find(content => content.hash === knownContent.hash && content.filename !== item.filename);
+                                if (matchingItem) {
+                                    Console.log(`Found duplicate content: ${item.filename} matches ${matchingItem.filename}`);
+                                }
+                            }
+                        }
+                        
+                        newMedia = newUniqueMedia;
+                    } else {
+                        newMedia = urlFilteredMedia;
+                    }
+
+                    if (newMedia.length > 0) {
+                        this.mediaList.push(...newMedia);
+                        foundMatchingMedia = true;
+                        
+                        if (reset) {
+                            this.currentIndex = 0;
+                            await this.displayCurrentMedia();
+                        } else {
+                            this.updateMediaCounter();
                         }
                     }
                 }
+
                 attempts++;
+            }
+
+            if (attempts >= MAX_ATTEMPTS) {
+                Console.warn(`Reached maximum fetch attempts (${MAX_ATTEMPTS})`);
             }
 
             if (reset && this.mediaList.length > 0) {
                 Console.success(`Initially loaded ${this.mediaList.length} media items`);
-            } else if (this.mediaList.length === 0) {
-                const mediaContent = document.querySelector('#mediaContent');
-                mediaContent.innerHTML = '<div class="no-media">No media found</div>';
-                this.updateMediaCounter();
-            }
-
-            // Add logging when hasMore becomes false
-            if (!this.hasMoreMedia) {
-                Console.warn('Reached the end of available media');
             }
 
         } catch (error) {
             Console.error('Error loading media:', error);
         } finally {
             this.isLoading = false;
+            // Clear the progress entry when done
+            if (progressEntry) {
+                Console.clearProgress(progressEntry);
+            }
         }
     }
 
@@ -1249,55 +1211,6 @@ class MediaViewerScreen extends BaseScreen {
         }
     }
 
-    async processHashesInBackground(mediaItems) {
-        const duplicates = [];
-        
-        // If filtering is disabled, return empty duplicates array
-        if (!this.filterDuplicates) {
-            return duplicates;
-        }
-        
-        for (const item of mediaItems) {
-            try {
-                const response = await fetch(item.url, {
-                    referrer: "https://discord.com",
-                    referrerPolicy: "no-referrer-when-downgrade",
-                });
-                
-                if (!response.ok) continue;
-                
-                const buffer = await response.arrayBuffer();
-                const hashBuffer = await crypto.subtle.digest('SHA-1', buffer);
-                const hashArray = Array.from(new Uint8Array(hashBuffer));
-                const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-                // Check if this hash exists in our collection
-                let isDuplicate = false;
-                for (const [existingUrl, existingHash] of this.mediaHashes.entries()) {
-                    if (existingHash === hashHex && existingUrl !== item.url) {
-                        Console.log(`Found duplicate content: ${item.filename} matches ${existingUrl}`);
-                        isDuplicate = true;
-                        duplicates.push(item);
-                        break;
-                    }
-                }
-
-                // Only store hash if we're filtering duplicates
-                if (this.filterDuplicates) {
-                    this.mediaHashes.set(item.url, hashHex);
-                }
-
-            } catch (error) {
-                Console.error(`Error processing ${item.filename}: ${error.message}`);
-                if (this.filterDuplicates) {
-                    this.mediaHashes.set(item.url, null);
-                }
-            }
-        }
-
-        return duplicates;
-    }
-
     async navigateMedia(direction) {
         if (!this.mediaList.length) return;
 
@@ -1305,36 +1218,32 @@ class MediaViewerScreen extends BaseScreen {
         
         // Don't allow navigation past the end while loading more
         if (newIndex >= this.mediaList.length && this.isLoading) {
+            Console.log('Loading in progress, waiting before navigating past end');
             return;
         }
 
         // Don't allow navigation past the beginning
         if (newIndex < 0) {
+            Console.log('Already at start of media');
             return;
         }
         // For forward navigation, only proceed if we have the item
         else if (newIndex < this.mediaList.length) {
             this.currentIndex = newIndex;
-        }
-        // Otherwise, try to load more data but don't change the index
-        else if (this.hasMoreMedia) {
-            await this.preloadBatch(this.currentIndex, 5);
-            // If new items were loaded, then we can proceed
-            if (newIndex < this.mediaList.length) {
-                this.currentIndex = newIndex;
-            }
+            
+        // Try to load more if we're at the end and API indicates more available
+        } else {
+            Console.log('Reached end of all available media');
             return;
         }
 
         // Display current media
         await this.displayCurrentMedia();
 
-        // Only preload in the direction we're moving
-        const preloadStartIndex = direction > 0 ? 
-            this.currentIndex + 1 : 
-            Math.max(0, this.currentIndex - 5);
-            
-        this.preloadBatch(preloadStartIndex, 5);
+        // If we're getting close to the end, load more media
+        if (this.mediaList.length - this.currentIndex <= 25 && this.hasMoreMedia && !this.isLoading) {
+            await this.loadMedia(false);
+        }
     }
 
     filterChannels(searchTerm) {
@@ -1508,6 +1417,12 @@ class MediaViewerScreen extends BaseScreen {
     cleanup() {
         Console.log('Cleaning up MediaViewer resources...');
         
+        // Remove keyboard listener
+        if (this.keyboardListener) {
+            document.removeEventListener('keydown', this.keyboardListener);
+            this.keyboardListener = null;
+        }
+
         // Clear autoplay timer
         this.clearAutoplayTimer();
         
@@ -1554,14 +1469,69 @@ class MediaViewerScreen extends BaseScreen {
         // Clear media hashes
         this.mediaHashes.clear();
         
+        // Clear known content hashes
+        this.knownContentHashes.clear();
+        Console.log('Cleared known content hashes');
+        
         Console.success('MediaViewer cleanup completed');
     }
 
     // Add new method to save filter state
     saveFilterDuplicatesState(state) {
+        // If already in the same state, do nothing
+        if (this.filterDuplicates === state) {
+            return;
+        }
+
+        // If currently loading, warn user and revert checkbox
+        if (this.isLoading) {
+            Console.warn('Please wait for current loading to complete before changing filter settings');
+            // Revert checkbox to previous state
+            const checkbox = document.querySelector('#filterDuplicates');
+            if (checkbox) {
+                checkbox.checked = this.filterDuplicates;
+            }
+            return;
+        }
+
         this.filterDuplicates = state;
         this.store.set('filterDuplicates', state);
-        Console.log(`Saving duplicate filter state: ${state}`);
+        Console.log(`Duplicate filter ${state ? 'enabled' : 'disabled'}`);
+
+        // Reset all media-related state
+        this.mediaList = [];
+        this.currentIndex = 0;
+        this.currentOffset = 0;
+        this.hasMoreMedia = true;
+        this.mediaCache.clear();
+        this.mediaHashes.clear();
+        this.preloadingIndexes.clear();
+        this.knownContentHashes.clear();
+
+        // Clear the media display
+        const mediaContent = document.querySelector('#mediaContent');
+        if (mediaContent) {
+            mediaContent.innerHTML = '<div class="loading">Loading media...</div>';
+        }
+
+        // Reset counter and details
+        const counter = document.querySelector('#mediaCounter');
+        const details = document.querySelector('#mediaDetails');
+        if (counter) counter.textContent = '0/0';
+        if (details) details.textContent = '';
+
+        // Reload media with new filter state
+        if (this.selectedChannel) {
+            this.loadMedia(true).catch(error => {
+                Console.error('Error reloading media after filter change:', error);
+                // If load fails, revert to previous state
+                this.filterDuplicates = !state;
+                const checkbox = document.querySelector('#filterDuplicates');
+                if (checkbox) {
+                    checkbox.checked = !state;
+                }
+            });
+        }
     }
 
     // Add new method to handle refreshing all channels
@@ -1588,7 +1558,6 @@ class MediaViewerScreen extends BaseScreen {
             if (navigationInstance?.preloadedData) {
                 navigationInstance.preloadedData.dms = dms;
                 navigationInstance.preloadedData.servers = servers;
-                Console.log('Updated Navigation preloaded data');
             }
             
             const currentView = document.querySelector('#selectDM').classList.contains('active') ? 'dms' : 'servers';
@@ -1645,6 +1614,43 @@ class MediaViewerScreen extends BaseScreen {
             });
         }
     }
+
+    // Add new helper method to find matching file
+    findMatchingFile(duplicate, hashMap) {
+        const duplicateHash = hashMap.get(duplicate.url);
+        if (!duplicateHash) return 'Unknown';
+        
+        for (const [url, hash] of hashMap.entries()) {
+            if (hash === duplicateHash && url !== duplicate.url) {
+                // Extract filename from URL
+                const filename = url.split('/').pop().split('?')[0];
+                return filename;
+            }
+        }
+        return 'Unknown';
+    }
+}
+
+// Add CRC32 implementation at the class level
+function crc32(data) {
+    const table = new Int32Array(256);
+    let crc = -1;
+    
+    // Generate CRC table
+    for (let i = 0; i < 256; i++) {
+        let c = i;
+        for (let j = 0; j < 8; j++) {
+            c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        }
+        table[i] = c;
+    }
+    
+    // Calculate CRC
+    for (let i = 0; i < data.length; i++) {
+        crc = (crc >>> 8) ^ table[(crc ^ data[i]) & 0xFF];
+    }
+    
+    return (-1 ^ crc) >>> 0;
 }
 
 module.exports = MediaViewerScreen;

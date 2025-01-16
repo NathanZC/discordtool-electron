@@ -177,7 +177,6 @@ class ClosedDMsScreen extends BaseScreen {
             let dms;
             if (!forceRefresh && this.preloadedData?.dms) {
                 dms = this.preloadedData.dms;
-                Console.log('Using preloaded DM data');
             } else {
                 dms = await this.api.getAllOpenDMs();
                 // Update preloaded data cache in both this component and the parent Navigation
@@ -197,7 +196,7 @@ class ClosedDMsScreen extends BaseScreen {
             // Clear and repopulate the Set with channel IDs
             this.openDMs.clear();
             dms.forEach(dm => this.openDMs.add(dm.id));
-            Console.log(`Loaded ${this.openDMs.size} open DM channels`);
+            Console.success(`Loaded ${this.openDMs.size} open DM channels`);
         } catch (error) {
             Console.error('Error loading open DMs: ' + error.message);
         }

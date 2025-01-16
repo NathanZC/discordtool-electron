@@ -116,7 +116,7 @@ class AuthScreen {
             try {
                 // Create a timeout promise
                 const timeoutPromise = new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error('Timeout')), 5000);
+                    setTimeout(() => reject(new Error('Timeout')), 15000);
                 });
 
                 // Load both DMs and servers with timeout

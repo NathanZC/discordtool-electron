@@ -1,8 +1,26 @@
 # Discord Tool - Electron
 
-Discord Tool is an Electron-based application designed to help manage Discord accounts. It provides a variety of features to interact with Discord's API, allowing users to manage direct messages, servers, and more.
+Discord Tool is an Electron-based application designed as a tool to help manage Discord accounts and data. It provides a variety of features to interact with Discord's API, allowing users to manage direct messages, servers, and more.
 
 ## Features
+
+### Account Management
+- Securely save and manage multiple Discord accounts
+- Quick account switching with saved tokens
+- Visual account selection with usernames and avatars
+- Remember me functionality for frequently used accounts
+
+### Media Viewer
+- Browse and download media (images, videos, GIFs) from DMs and servers as fast as possible with preloading and caching
+- Smart duplicate detection to avoid saving the same media multiple times
+- Autoplay functionality with customizable delay
+- Keyboard shortcuts for quick navigation and saving
+- Batch download capabilities
+- Video playback controls with adjustable volume
+- Save location management per user account
+- Media information display (filename, size, date)
+- Search and filter channels for easy access
+- Supports both server-wide and channel-specific media viewing
 
 ### View Open DMs
 - Manage and delete messages from your active direct message channels
@@ -19,6 +37,7 @@ Discord Tool is an Electron-based application designed to help manage Discord ac
 - Target specific channels using Channel ID for precise control
 
 ### Find Closed DMs
+- batch open closed DMs functionality (discord limits to 1000 open DMs at a time)
 - Locate and recover closed DM channels using your Discord data file
 - Filter between open and closed DMs to focus on what you need
 - Easily reopen closed conversations with a single click
@@ -44,7 +63,7 @@ Discord Tool is an Electron-based application designed to help manage Discord ac
 ## Project Structure
 
 - **src/components**: Contains reusable components like `Navigation` and `Console`
-- **src/screens**: Contains different screens for the application, such as `AuthScreen`, `OpenDMsScreen`, `ServersScreen`, etc.
+- **src/screens**: Contains different screens for the application, such as `AuthScreen`, `MediaViewerScreen`, `OpenDMsScreen`, `ServersScreen`, etc.
 - **src/utils**: Utility functions and classes for interacting with Discord's API
 - **main.js**: Main entry point for the Electron application
 - **index.html**: HTML file that serves as the main UI container
@@ -88,6 +107,15 @@ npm run build
 ```
 
 This will create a production-ready build in the `release` directory, which you can distribute and run on other machines.
+
+## Keyboard Shortcuts
+
+### Media Viewer
+- `←` Previous media
+- `→` Next media
+- `↑` Save current media and move to next
+- `↓` Undo last save
+- `S` Save all media in current view
 
 ## License
 
