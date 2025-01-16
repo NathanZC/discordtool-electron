@@ -15,8 +15,6 @@
 }
 
 .channel-selection h1 {
-    font-size: 24px;
-    font-weight: 600;
     margin-bottom: 25px;
     text-align: center;
     color: #fff;
@@ -369,14 +367,71 @@
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
+.media-info-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 #mediaCounter {
     font-weight: 600;
     color: #dcddde;
 }
 
-#mediaDetails {
-    color: #b9bbbe;
-    font-size: 14px;
+.shortcuts-tooltip {
+    position: relative;
+    display: inline-flex;
+}
+
+.shortcuts-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: rgba(47, 49, 54, 0.95);
+    border-radius: 4px;
+    border: 1px solid #40444B;
+    cursor: help;
+    font-size: 13px;
+}
+
+.shortcuts-content {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    margin-bottom: 10px;
+    background: rgba(47, 49, 54, 0.95);
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #40444B;
+    backdrop-filter: blur(5px);
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 200px;
+    z-index: 100;
+}
+
+.shortcuts-info:hover .shortcuts-content {
+    display: flex;
+}
+
+.shortcut-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.shortcut-key {
+    background: #202225;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #fff;
+    font-weight: 500;
+    border: 1px solid #40444B;
+    min-width: 20px;
+    text-align: center;
 }
 
 /* Loading and error states in media content */
@@ -513,4 +568,43 @@
     position: relative;
     display: flex;
     align-items: center;
+}
+
+/* Media Viewer specific refresh button styles */
+.media-viewer-refresh {
+    background: #4752C4;
+    color: #fff;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    margin-left: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.media-viewer-refresh:hover {
+    background: #5865F2;
+    transform: translateY(-1px) rotate(180deg);
+}
+
+.media-viewer-refresh.spinning {
+    animation: mediaViewerSpin 1s linear infinite;
+    background: #5865F2;
+    pointer-events: none;
+}
+
+@keyframes mediaViewerSpin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }

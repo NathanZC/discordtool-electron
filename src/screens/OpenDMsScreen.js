@@ -361,12 +361,12 @@ class OpenDMsScreen extends BaseScreen {
                         data-channel-name="${displayName}"
                         data-recipient-id="${recipientId}">
                         <span class="dm-recipient">
+                            <span class="dm-index">${index + 1}.</span>
                             <button class="user-info-btn" title="Get User Info">
                                 <svg width="16" height="16" viewBox="0 0 16 16">
                                     <path fill="currentColor" d="M8 0a8 8 0 100 16A8 8 0 008 0zm0 12a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm1.5-4.563a.5.5 0 01-.5.5h-2a.5.5 0 01-.5-.5v-.375c0-.5.5-.812.938-1.062C7.907 5.75 8 5.5 8 5.25v-1a1.25 1.25 0 112.5 0v.375c0 .5-.5.812-.938 1.062-.469.25-.562.5-.562.75v1z"/>
                                 </svg>
                             </button>
-                            <span class="dm-index">${index + 1}.</span>
                             ${isGroupDM ? '<span class="channel-type group">Group</span>' : ''}
                             ${nickname} ${!isGroupDM ? `<span class="dm-username">(${displayName})</span>` : ''}
                         </span>

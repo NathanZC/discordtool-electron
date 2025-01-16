@@ -97,6 +97,7 @@ function createWindow() {
 
     // Show window when ready
     win.once('ready-to-show', () => {
+        win.maximize();
         win.show();
     });
 

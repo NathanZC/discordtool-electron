@@ -2430,10 +2430,71 @@ code {
 
 /* Update help screen specific container */
 .help-screen-container {
+    display: flex;
+    gap: 2rem;
     height: 100%;
-    overflow-y: auto;
-    padding: 20px;
+    overflow: hidden;
 }
+
+.help-navigation {
+    width: 200px;
+    min-width: 200px;
+    background: #2f3136;
+    padding: 1rem;
+    border-radius: 8px;
+    height: 100%;
+    position: sticky;
+    top: 0;
+}
+
+.help-navigation h2 {
+    color: #fff;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #40444b;
+}
+
+.help-nav-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.help-nav-list ul {
+    list-style: none;
+    padding-left: 1rem;
+    margin: 0.5rem 0;
+}
+
+.help-nav-list a {
+    color: #dcddde;
+    text-decoration: none;
+    display: block;
+    padding: 0.5rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.help-nav-list a:hover {
+    background: #40444b;
+    color: #fff;
+}
+
+.help-content {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 1rem;
+}
+
+.help-section {
+    scroll-margin-top: 1rem;
+}
+
+.feature-block {
+    scroll-margin-top: 1rem;
+}
+
 .channel-type.group {
     background-color: #7289da;
     color: white;

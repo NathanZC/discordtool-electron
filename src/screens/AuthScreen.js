@@ -8,7 +8,6 @@ class AuthScreen {
         this.store = new Store();
         this.savedAccounts = this.store.get('saved_accounts') || [];
         console.log('Store location:', this.store.path); // This will show you where the data is stored
-        console.log('AuthScreen initializing...');
         try {
             this.init();
             this.setupEventListeners();
@@ -62,7 +61,7 @@ class AuthScreen {
                         <li>Go to the "Network" tab (refresh if no requests)</li>
                         <li>Click on any request to discord.com that uses auth (look for @me under Name)</li>
                         <li>To the right look under Response Headers and Look for "Authorization" in the request headers</li>
-                        <li>Look for "Authorization" in the request headers</li>
+                        <li>Copy the value of the Authorization header and paste it into the input field</li>
                     </ol>
                     <p>⚠️ Never share your token with anyone! It provides full access to your account.</p>
                 </div>

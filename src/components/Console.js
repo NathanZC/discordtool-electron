@@ -27,6 +27,14 @@ class Console {
         if (cacheAttachmentsCheckbox) {
             cacheAttachmentsCheckbox.checked = false;
         }
+
+        // Add global click handler for console images
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('console-image')) {
+                const fullResUrl = e.target.dataset.fullRes || e.target.src;
+                ipcRenderer.send('copy-url', fullResUrl);
+            }
+        });
     }
 
     static show() {
@@ -184,15 +192,18 @@ class Console {
         infoBlock.style.wordBreak = 'break-word';
         
         const formatLine = (label, value) => `${label}: ${value}<br>`;
-        const formatLink = (url) => `
+        const formatLink = (url, maxResUrl) => `
             <div class="console-image-container">
-                <img src="${url}" alt="Discord Asset" class="console-image">
+                <img src="${url}" alt="Discord Asset" class="console-image" data-full-res="${maxResUrl}">
             </div>`;
         
         const avatarUrl = userInfo.avatar ? 
             `https://cdn.discordapp.com/avatars/${userInfo.id}/${userInfo.avatar}` : null;
+        const avatarUrlMaxRes = avatarUrl ? `${avatarUrl}?size=4096` : null;
+        
         const bannerUrl = userInfo.banner ? 
             `https://cdn.discordapp.com/banners/${userInfo.id}/${userInfo.banner}` : null;
+        const bannerUrlMaxRes = bannerUrl ? `${bannerUrl}?size=4096` : null;
         
         const getFlagNames = (flags) => {
             if (!flags) return null;
@@ -249,8 +260,8 @@ class Console {
         if (userInfo.id) lines.push(formatLine('User ID', userInfo.id));
         if (userInfo.bio) lines.push(formatLine('Bio', userInfo.bio));
         if (userInfo.pronouns) lines.push(formatLine('Pronouns', userInfo.pronouns));
-        if (avatarUrl) lines.push(formatLine('Avatar', formatLink(avatarUrl)));
-        if (bannerUrl) lines.push(formatLine('Banner', formatLink(bannerUrl)));
+        if (avatarUrl) lines.push(formatLine('Avatar', formatLink(avatarUrl, avatarUrlMaxRes)));
+        if (bannerUrl) lines.push(formatLine('Banner', formatLink(bannerUrl, bannerUrlMaxRes)));
         if (userInfo.accentColor) lines.push(formatLine('Accent Color', userInfo.accentColor));
         
         const badges = getFlagNames(userInfo.flags);

@@ -168,7 +168,7 @@ class MediaViewerScreen extends BaseScreen {
                         <button id="selectDM" class="source-btn">
                             <span>💬</span> Direct Messages
                         </button>
-                        <button id="refreshAll" class="refresh-btn" title="Refresh All">🔄</button>
+                        <button id="refreshAll" class="media-viewer-refresh" title="Refresh All">🔄</button>
                     </div>
                     <div class="channel-search-container">
                         <span class="channel-search-icon">🔍</span>
@@ -250,7 +250,37 @@ class MediaViewerScreen extends BaseScreen {
             </div>
 
             <div class="media-info">
-                <span id="mediaCounter">0/0</span>
+                <div class="media-info-left">
+                    <span id="mediaCounter">0/0</span>
+                    <div class="shortcuts-tooltip">
+                        <div class="shortcuts-info">
+                            <span>ℹ️</span>
+                            <span>Shortcuts</span>
+                            <div class="shortcuts-content">
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">←</span>
+                                    <span>Previous</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">→</span>
+                                    <span>Next</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">↑</span>
+                                    <span>Save & Next</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">↓</span>
+                                    <span>Undo Save</span>
+                                </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">S</span>
+                                    <span>Save All</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <span id="mediaDetails"></span>
                 <div class="filter-controls">
                     <label><input type="checkbox" id="filterDuplicates" ${this.filterDuplicates ? 'checked' : ''}> Filter Duplicates</label>
