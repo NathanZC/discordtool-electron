@@ -412,3 +412,11 @@
     background-color: #5865f2;
     color: white;
 }
+
+.indexsearch-message.own-message {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.indexsearch-message:not(.own-message) {
+    cursor: default;
+}

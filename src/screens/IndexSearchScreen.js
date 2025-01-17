@@ -10,6 +10,7 @@ class IndexSearchScreen extends BaseScreen {
     constructor(token, userId, preloadedData = null) {
         super(token);
         this.api = new DiscordAPI(token, userId);
+        this.userId = userId;
         this.isLoading = false;
         this.currentSearchTerm = '';
         this.currentSearchType = '';
@@ -29,9 +30,11 @@ class IndexSearchScreen extends BaseScreen {
         if (!this.openDMs.has(channelId)) {
             Console.log('DM channel not open, attempting to open...');
             try {
-                const response = await this.api.createDM(channelId);
-                if (response.ok) {
-                    Console.log('Successfully opened DM channel');
+                const result = await this.api.openDM(channelId);
+                
+                if (result && result.recipients && result.recipients[0]) {
+                    const username = result.recipients[0].username;
+                    Console.success(`Successfully opened DM with ${username}`);
                     this.openDMs.add(channelId);
                 } else {
                     Console.error('Failed to open DM channel');
@@ -57,7 +60,7 @@ class IndexSearchScreen extends BaseScreen {
                         <div class="indexscreen-search-controls">
                             <input type="text" 
                                 id="indexscreen-search-input" 
-                                placeholder="Enter your search term..."
+                                placeholder="Enter your search term... (This will search all dms!!!)"
                                 class="indexscreen-input">
                             <button id="indexscreen-search-btn" class="indexscreen-button">
                                 Search
@@ -71,7 +74,7 @@ class IndexSearchScreen extends BaseScreen {
                             <div class="indexscreen-load-controls">
                                 <button id="indexscreen-load-all" class="indexscreen-button" disabled>Load All</button>
                                 <label class="indexscreen-only-me">
-                                    <input type="checkbox" id="indexscreen-only-me-checkbox">
+                                    <input type="checkbox" id="indexscreen-only-me-checkbox" checked>
                                     Only Me
                                 </label>
                             </div>
@@ -82,11 +85,11 @@ class IndexSearchScreen extends BaseScreen {
                 <div id="indexscreen-results" class="indexscreen-results">
                     <!-- Initial tabs structure -->
                     <div class="indexsearch-tabs">
-                        <button class="indexsearch-tab-button" data-tab="messages">
+                        <button class="indexsearch-tab-button active" data-tab="messages">
                             Messages
                             <span class="indexsearch-tab-button-count">0</span>
                         </button>
-                        <button class="indexsearch-tab-button active" data-tab="links">
+                        <button class="indexsearch-tab-button" data-tab="links">
                             Links
                             <span class="indexsearch-tab-button-count">0</span>
                         </button>
@@ -104,12 +107,12 @@ class IndexSearchScreen extends BaseScreen {
                         </button>
                     </div>
                     <div class="indexsearch-results-container">
-                        <div class="indexsearch-tab-content" id="tab-messages">
+                        <div class="indexsearch-tab-content active" id="tab-messages">
                             <div class="indexsearch-messages">
-                                <div class="indexsearch-no-results">Enter a search term to find messages</div>
+                                <div class="indexsearch-loading">Loading messages...</div>
                             </div>
                         </div>
-                        <div class="indexsearch-tab-content active" id="tab-links">
+                        <div class="indexsearch-tab-content" id="tab-links">
                             <div class="indexsearch-messages">
                                 <div class="indexsearch-loading">Loading links...</div>
                             </div>
@@ -144,14 +147,18 @@ class IndexSearchScreen extends BaseScreen {
 
     async loadInitialContent() {
         try {
-            // Make a single request for all tab types
-            const response = await this.api.indexSearch('', 'all');
+            // Get Only Me checkbox state
+            const onlyMeCheckbox = document.querySelector('#indexscreen-only-me-checkbox');
+            const onlyMe = onlyMeCheckbox?.checked ?? true; // Default to true if checkbox not found
+
+            // Make a single request for all tab types with onlyMe parameter
+            const response = await this.api.indexSearch('', 'all', { onlyMe });
             
             if (response.ok) {
                 const data = await response.json();
                 
                 // Process each tab's data
-                const tabsToProcess = ['links', 'media', 'files', 'pins'];
+                const tabsToProcess = ['messages', 'links', 'media', 'files', 'pins'];
                 
                 for (const tabType of tabsToProcess) {
                     const tabData = data.tabs[tabType];
@@ -201,7 +208,7 @@ class IndexSearchScreen extends BaseScreen {
         } catch (error) {
             Console.error('Error loading initial content:', error);
             // Update all tabs to show error state
-            const tabsToProcess = ['links', 'media', 'files', 'pins'];
+            const tabsToProcess = ['messages', 'links', 'media', 'files', 'pins'];
             for (const tabType of tabsToProcess) {
                 const tabContent = document.querySelector(`#tab-${tabType} .indexsearch-messages`);
                 if (tabContent) {
@@ -288,20 +295,20 @@ class IndexSearchScreen extends BaseScreen {
         selectLoadedBtn.addEventListener('click', () => {
             // Check if all visible messages are selected
             const activeTab = document.querySelector('.indexsearch-tab-content.active');
-            const messages = activeTab.querySelectorAll('.indexsearch-message');
-            const allSelected = Array.from(messages).every(msg => 
+            const ownMessages = activeTab.querySelectorAll('.indexsearch-message.own-message');
+            const allSelected = Array.from(ownMessages).every(msg => 
                 this.selectedMessages.has(msg.dataset.messageId)
             );
 
             if (allSelected) {
                 // Unselect all
-                messages.forEach(message => {
+                ownMessages.forEach(message => {
                     this.selectedMessages.delete(message.dataset.messageId);
                 });
                 selectLoadedBtn.textContent = 'Select All Loaded';
             } else {
-                // Select all
-                messages.forEach(message => {
+                // Select all own messages
+                ownMessages.forEach(message => {
                     this.selectedMessages.set(message.dataset.messageId, message.dataset.channelId);
                 });
                 selectLoadedBtn.textContent = 'Unselect All Loaded';
@@ -356,11 +363,16 @@ class IndexSearchScreen extends BaseScreen {
             }
         });
 
-        // Add message click handler for selection
+        // Update message click handler for selection
         container.addEventListener('click', (e) => {
             const messageElement = e.target.closest('.indexsearch-message');
             // Only handle clicks directly on the message, not on buttons or links within it
             if (messageElement && !e.target.closest('button') && !e.target.closest('a') && !this.deleteInProgress) {
+                // Check if it's the user's own message
+                if (messageElement.dataset.authorId !== this.userId) {
+                    return; // Ignore clicks on messages that aren't yours
+                }
+                
                 const messageId = messageElement.dataset.messageId;
                 const channelId = messageElement.dataset.channelId;
                 
@@ -464,7 +476,7 @@ class IndexSearchScreen extends BaseScreen {
         const resultsContainer = document.querySelector('#indexscreen-results');
         const searchTerm = searchInput.value.trim();
         const onlyMeCheckbox = document.querySelector('#indexscreen-only-me-checkbox');
-        const onlyMe = onlyMeCheckbox?.checked || false;
+        const onlyMe = onlyMeCheckbox?.checked ?? true; // Default to true if checkbox not found
 
         // Reset state
         this.currentSearchTerm = searchTerm;
@@ -479,11 +491,11 @@ class IndexSearchScreen extends BaseScreen {
             // Reset to initial tabs view
             resultsContainer.innerHTML = `
                 <div class="indexsearch-tabs">
-                    <button class="indexsearch-tab-button" data-tab="messages">
+                    <button class="indexsearch-tab-button active" data-tab="messages">
                         Messages
                         <span class="indexsearch-tab-button-count">0</span>
                     </button>
-                    <button class="indexsearch-tab-button active" data-tab="links">
+                    <button class="indexsearch-tab-button" data-tab="links">
                         Links
                         <span class="indexsearch-tab-button-count">0</span>
                     </button>
@@ -501,12 +513,12 @@ class IndexSearchScreen extends BaseScreen {
                     </button>
                 </div>
                 <div class="indexsearch-results-container">
-                    <div class="indexsearch-tab-content" id="tab-messages">
+                    <div class="indexsearch-tab-content active" id="tab-messages">
                         <div class="indexsearch-messages">
-                            <div class="indexsearch-no-results">Enter a search term to find messages</div>
+                            <div class="indexsearch-loading">Loading messages...</div>
                         </div>
                     </div>
-                    <div class="indexsearch-tab-content active" id="tab-links">
+                    <div class="indexsearch-tab-content" id="tab-links">
                         <div class="indexsearch-messages">
                             <div class="indexsearch-loading">Loading links...</div>
                         </div>
@@ -649,18 +661,29 @@ class IndexSearchScreen extends BaseScreen {
     }
 
     formatMessages(messages, tabType) {
-        if (!messages || messages.length === 0) return '';
+        if (!messages || messages.length === 0) {
+            const onlyMeCheckbox = document.querySelector('#indexscreen-only-me-checkbox');
+            const onlyMe = onlyMeCheckbox?.checked ?? true;
+            if (tabType === 'messages' && !onlyMe) {
+                return '<div class="indexsearch-no-results">Enter a search term to find messages</div>';
+            }
+            return '<div class="indexsearch-no-results">No results found</div>';
+        }
         
         const flatMessages = messages.flat();
-        // Initialize counter for this tab if it doesn't exist
         if (!this.messageCounters[tabType]) {
             this.messageCounters[tabType] = 0;
         }
         
         return flatMessages.map((msg, index) => {
             this.messageCounters[tabType]++;
+            const isOwnMessage = msg.author.id === this.userId;
+            
             return `
-                <div class="indexsearch-message" data-message-id="${msg.id}" data-channel-id="${msg.channel_id}">
+                <div class="indexsearch-message ${isOwnMessage ? 'own-message' : ''}" 
+                     data-message-id="${msg.id}" 
+                     data-channel-id="${msg.channel_id}"
+                     data-author-id="${msg.author.id}">
                     <div class="indexsearch-message-header">
                         <span class="indexsearch-message-number">#${this.messageCounters[tabType]}</span>
                         <img 
@@ -742,7 +765,7 @@ class IndexSearchScreen extends BaseScreen {
         const activeTab = document.querySelector('.indexsearch-tab-content.active');
         if (!activeTab) return;
 
-        const messages = activeTab.querySelectorAll('.indexsearch-message');
+        const messages = activeTab.querySelectorAll('.indexsearch-message.own-message');
         messages.forEach(message => {
             const messageId = message.dataset.messageId;
             const channelId = message.dataset.channelId;

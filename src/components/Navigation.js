@@ -21,7 +21,7 @@ class Navigation {
             { id: 'closed-dms', label: 'Find Closed DMs', icon: '🕵️' },
             { id: 'media-viewer', label: 'Media Viewer', icon: '🖼️' },
             { id: 'wipe', label: 'Wipe Account', icon: '🗑️' },
-            { id: 'index-search', label: 'Index Search', icon: '🔎' },
+            { id: 'index-search', label: 'Enhanced Search', icon: '🔎' },
             { id: 'help', label: 'How to Use', icon: '❔' },
         ];
         
