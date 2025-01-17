@@ -989,7 +989,8 @@ class MediaViewerScreen extends BaseScreen {
             let batchSize = 0;
 
             while ((!foundMatchingMedia || (reset && this.mediaList.length < MIN_INITIAL_ITEMS)) 
-                   && this.hasMoreMedia && attempts < MAX_ATTEMPTS) {
+                   && this.hasMoreMedia 
+                   && attempts < MAX_ATTEMPTS) {
                 
                 // Add delay between concurrent attempts
                 if (attempts > 0) {
@@ -1035,12 +1036,18 @@ class MediaViewerScreen extends BaseScreen {
 
                 if (!response.media?.length) {
                     attempts++;
-                    continue;
+                    // Only continue if we still have more media
+                    if (this.hasMoreMedia) {
+                        continue;
+                    } else {
+                        break;
+                    }
                 }
 
                 // Step 1: Filter URL duplicates
                 const urlFilteredMedia = response.media.filter(item => {
                     const isDuplicate = this.mediaList.some(existing => existing.url === item.url);
+                    if (isDuplicate) Console.warn(`Found URL duplicate: ${item.filename}`);
                     return !isDuplicate;
                 });
 
@@ -1153,10 +1160,11 @@ class MediaViewerScreen extends BaseScreen {
                                 newUniqueMedia.push(item);
                                 seenHashes.add(knownContent.hash);
                             } else {
+                                Console.warn(`Found duplicate: ${item.filename}`);
                                 const matchingItem = Array.from(this.knownContentHashes.values())
                                     .find(content => content.hash === knownContent.hash && content.filename !== item.filename);
                                 if (matchingItem) {
-                                    Console.log(`Found duplicate content: ${item.filename} matches ${matchingItem.filename}`);
+                                    Console.warn(`Found duplicate content: ${item.filename} matches ${matchingItem.filename}`);
                                 }
                             }
                         }
@@ -1167,12 +1175,16 @@ class MediaViewerScreen extends BaseScreen {
                     }
 
                     if (newMedia.length > 0) {
+                        const currentPosition = this.currentIndex;
                         this.mediaList.push(...newMedia);
                         foundMatchingMedia = true;
                         
                         if (reset) {
-                            this.currentIndex = 0;
-                            await this.displayCurrentMedia();
+                            // Only reset to 0 if this is the first load
+                            if (this.mediaList.length === newMedia.length) {
+                                this.currentIndex = 0;
+                                await this.displayCurrentMedia();
+                            }
                         } else {
                             this.updateMediaCounter();
                         }
@@ -1182,8 +1194,13 @@ class MediaViewerScreen extends BaseScreen {
                 attempts++;
             }
 
+            // Add logging to help debug the exit condition
             if (attempts >= MAX_ATTEMPTS) {
                 Console.warn(`Reached maximum fetch attempts (${MAX_ATTEMPTS})`);
+            } else if (!this.hasMoreMedia) {
+                Console.log('No more media available from API');
+            } else if (!foundMatchingMedia) {
+                Console.log('No matching media found after processing');
             }
 
             if (reset && this.mediaList.length > 0) {
@@ -1496,7 +1513,6 @@ class MediaViewerScreen extends BaseScreen {
 
         this.filterDuplicates = state;
         this.store.set('filterDuplicates', state);
-        Console.log(`Duplicate filter ${state ? 'enabled' : 'disabled'}`);
 
         // Reset all media-related state
         this.mediaList = [];

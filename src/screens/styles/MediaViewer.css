@@ -612,3 +612,30 @@
         transform: rotate(360deg);
     }
 }
+
+.indexscreen-load-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.indexscreen-only-me {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #dcddde;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.indexscreen-only-me input[type="checkbox"] {
+    cursor: pointer;
+}
+
+.delete-selected.stopping {
+    background-color: #f04747;
+}
+
+.delete-selected.stopping:hover {
+    background-color: #d84040;
+}

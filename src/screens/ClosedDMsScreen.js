@@ -187,7 +187,6 @@ class ClosedDMsScreen extends BaseScreen {
                     const navigationInstance = window.navigationInstance;
                     if (navigationInstance?.preloadedData) {
                         navigationInstance.preloadedData.dms = dms;
-                        Console.log('Updated Navigation preloaded data');
                     }
                 }
                 Console.log('Fetched fresh DM data from API');

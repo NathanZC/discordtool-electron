@@ -1,0 +1,414 @@
+.indexscreen-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem;
+    background: #36393F;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.indexscreen-header {
+    flex-shrink: 0; /* Prevents the header from shrinking */
+}
+
+.indexscreen-title {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: #fff;
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.indexscreen-search-box {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    background: #2F3136;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.indexscreen-search-controls {
+    display: flex;
+    gap: 1rem;
+}
+
+.indexscreen-input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 2px solid #40444B;
+    border-radius: 6px;
+    background: #202225;
+    color: #fff;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+}
+
+.indexscreen-input:focus {
+    outline: none;
+    border-color: #5865F2;
+    box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.2);
+}
+
+.indexscreen-input::placeholder {
+    color: #72767D;
+}
+
+.indexscreen-select {
+    padding: 0.75rem 1rem;
+    border: 2px solid #40444B;
+    border-radius: 6px;
+    background: #202225;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    min-width: 120px;
+    transition: all 0.2s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 16px;
+    padding-right: 32px;
+}
+
+.indexscreen-select:focus {
+    outline: none;
+    border-color: #5865F2;
+    box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.2);
+}
+
+.indexscreen-select option {
+    background: #202225;
+    color: #fff;
+    padding: 12px;
+}
+
+.indexscreen-button {
+    padding: 0.75rem 1.5rem;
+    background: #4752C4;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    min-width: 100px;
+}
+
+.indexscreen-button:hover {
+    background: #5865F2;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.indexscreen-button:active {
+    transform: translateY(0);
+}
+
+.indexscreen-results {
+    flex: 1; /* Takes up remaining space */
+    overflow-y: auto; /* Enables vertical scrolling */
+    background: #2F3136;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    margin-top: 1rem;
+}
+
+/* Custom scrollbar styling */
+.indexscreen-results::-webkit-scrollbar {
+    width: 8px;
+}
+
+.indexscreen-results::-webkit-scrollbar-track {
+    background: #2F3136;
+    border-radius: 8px;
+}
+
+.indexscreen-results::-webkit-scrollbar-thumb {
+    background: #202225;
+    border-radius: 8px;
+}
+
+.indexscreen-results::-webkit-scrollbar-thumb:hover {
+    background: #40444B;
+}
+
+.indexsearch-tabs {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.5rem 1rem 0;
+    background: #202225;
+    border-bottom: 2px solid #40444B;
+}
+
+.indexsearch-tab-button {
+    padding: 0.75rem 1.25rem;
+    background: #2F3136;
+    border: none;
+    border-radius: 6px 6px 0 0;
+    color: #B9BBBE;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    position: relative;
+    bottom: -2px;
+    border: 2px solid transparent;
+}
+
+.indexsearch-tab-button:hover {
+    color: #fff;
+    background: #36393F;
+}
+
+.indexsearch-tab-button.active {
+    color: #fff;
+    background: #36393F;
+    border-color: #40444B;
+    border-bottom-color: #36393F;
+}
+
+.indexsearch-tab-button-count {
+    font-size: 0.8rem;
+    background: #202225;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    margin-left: 0.5rem;
+    font-weight: 600;
+}
+
+.indexsearch-results-container {
+    padding: 1.5rem;
+    background: #36393F;
+}
+
+.indexsearch-message {
+    background: #2F3136;
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    transition: all 0.2s ease;
+    border: 1px solid #40444B;
+    font-size: 0.9rem;
+    line-height: 1.3;
+    cursor: pointer;
+}
+
+.indexsearch-message.selected {
+    background: #34373C;
+    border-color: #5865F2;
+    box-shadow: 0 0 0 1px #5865F2;
+}
+
+.indexsearch-message:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    background: #36393F;
+}
+
+.indexsearch-message-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.indexsearch-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.indexsearch-username {
+    color: #fff;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.indexsearch-timestamp {
+    color: #72767D;
+    font-size: 0.75rem;
+    margin-left: auto;
+}
+
+.indexsearch-content {
+    color: #DCDDDE;
+    word-break: break-word;
+    padding: 0.25rem 0;
+}
+
+.indexsearch-attachments {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+}
+
+.indexsearch-attachment {
+    font-size: 0.8rem;
+    color: #00AFF4;
+}
+
+.indexsearch-attachment img {
+    max-height: 150px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.indexsearch-no-results {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 2rem;
+    font-style: italic;
+    background: var(--background-secondary);
+    border-radius: 8px;
+    margin: 1rem 0;
+}
+
+.indexsearch-loading {
+    text-align: center;
+    color: var(--text-primary);
+    padding: 2rem;
+    font-weight: 500;
+    background: var(--background-secondary);
+    border-radius: 8px;
+    margin: 1rem 0;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.indexsearch-error {
+    text-align: center;
+    color: var(--text-danger);
+    padding: 1rem;
+    background: var(--background-danger);
+    border-radius: 8px;
+    margin: 1rem 0;
+    border: 1px solid var(--border-danger);
+}
+
+.indexsearch-tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.indexsearch-tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.indexsearch-loading-more {
+    text-align: center;
+    padding: 1rem;
+    color: #B9BBBE;
+    font-size: 0.9rem;
+    background: #2F3136;
+    border-radius: 4px;
+    margin-top: 1rem;
+}
+
+.indexsearch-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.indexscreen-selection-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 0;
+    border-top: 1px solid #40444B;
+}
+
+.indexscreen-selection-controls .indexscreen-button {
+    padding: 8px 12px;
+    font-size: 12px;
+    min-width: unset;
+}
+
+.indexscreen-selected-count {
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.indexscreen-button-danger {
+    background: #ED4245;
+}
+
+.indexscreen-button-danger:hover {
+    background: #F04747;
+}
+
+.indexscreen-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.indexscreen-message-select {
+    margin-right: 0.5rem;
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+    accent-color: #5865F2;
+}
+
+.indexsearch-jump-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: #4752C4;
+    border: none;
+    border-radius: 3px;
+    color: white;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.1s ease, transform 0.1s ease;
+}
+
+.indexsearch-jump-btn:hover {
+    background: #5865F2;
+    transform: translateY(-1px);
+}
+
+.indexsearch-jump-btn:active {
+    background: #3C45A5;
+    transform: translateY(0);
+}
+
+.indexsearch-jump-icon {
+    width: 14px;
+    height: 14px;
+    opacity: 0.9;
+}
+
+.indexsearch-message-number {
+    color: #72767D;
+    font-size: 0.75rem;
+    margin-right: 8px;
+}
+.indexscreen-button.active {
+    background-color: #5865f2;
+    color: white;
+}

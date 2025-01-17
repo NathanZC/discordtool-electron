@@ -6,6 +6,7 @@ const WipeScreen = require('../screens/WipeScreen');
 const HelpScreen = require('../screens/HelpScreen');
 const Console = require('./Console');
 const MediaViewerScreen = require('../screens/MediaViewerScreen');
+const IndexSearchScreen = require('../screens/IndexSearchScreen');
 
 class Navigation {
     constructor(token, userId, userData, preloadedData = null) {
@@ -17,9 +18,10 @@ class Navigation {
         this.menuItems = [
             { id: 'open-dms', label: 'Open DMs', icon: '💬' },
             { id: 'servers', label: 'Accessible Servers', icon: '🖥️' },
-            { id: 'closed-dms', label: 'Find Closed DMs', icon: '🔍' },
+            { id: 'closed-dms', label: 'Find Closed DMs', icon: '🕵️' },
             { id: 'media-viewer', label: 'Media Viewer', icon: '🖼️' },
             { id: 'wipe', label: 'Wipe Account', icon: '🗑️' },
+            { id: 'index-search', label: 'Index Search', icon: '🔎' },
             { id: 'help', label: 'How to Use', icon: '❔' },
         ];
         
@@ -179,6 +181,15 @@ class Navigation {
             case 'closed-dms':
                 Console.show();
                 this.currentScreenInstance = new ClosedDMsScreen(
+                    this.token, 
+                    this.userId,
+                    this.preloadedData
+                );
+                this.currentScreenInstance.render(mainContent);
+                break;
+            case 'index-search':
+                Console.show();
+                this.currentScreenInstance = new IndexSearchScreen(
                     this.token, 
                     this.userId,
                     this.preloadedData

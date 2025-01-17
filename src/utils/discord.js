@@ -1262,6 +1262,166 @@ class DiscordAPI {
         }
     }
 
+    async post(endpoint, body) {
+        const options = {
+            method: 'POST',
+            headers: {
+                'Authorization': this.token,
+                'Content-Type': 'application/json',
+                'X-Discord-Timezone': Intl.DateTimeFormat().resolvedOptions().timeZone,
+                'X-Discord-Locale': 'en-US'
+            },
+            body: JSON.stringify(body)
+        };
+
+        return this.makeRequest(endpoint, options);
+    }
+
+    async indexSearch(searchTerm, searchType = 'all', options = {}) {
+        // Helper function to create tab config
+        const createTabConfig = (has = [], extraParams = {}) => ({
+            sort_by: "timestamp",
+            sort_order: "desc",
+            ...(options.onlyMe ? { author_id: [this.userId] } : {}), // This will now apply to all tab types
+            ...(searchTerm ? { content: searchTerm } : {}),
+            cursor: options.cursor || null,
+            ...(has.length > 0 ? { has } : {}),
+            ...extraParams,
+            limit: extraParams.limit || 15
+        });
+
+        const tabs = {};
+
+        // Configure different search types
+        switch (searchType) {
+            case 'messages':
+                tabs.messages = createTabConfig([], { content: searchTerm });
+                break;
+            
+            case 'links':
+                tabs.links = createTabConfig(['link'], { limit: 10 });
+                break;
+            
+            case 'media':
+                tabs.media = createTabConfig(['image', 'video']);
+                break;
+            
+            case 'files':
+                tabs.files = createTabConfig(['file'], { limit: 10 });
+                break;
+            
+            case 'pins':
+                tabs.pins = createTabConfig([], { pinned: true });
+                break;
+            
+            case 'all':
+            default:
+                tabs.messages = createTabConfig([], { content: searchTerm });
+                tabs.media = createTabConfig(['image', 'video']);
+                tabs.pins = createTabConfig([], { pinned: true });
+                tabs.links = createTabConfig(['link'], { limit: 10 });
+                tabs.files = createTabConfig(['file'], { limit: 10 });
+                break;
+        }
+
+        const searchParams = {
+            tabs,
+            track_exact_total_hits: true
+        };
+
+        return this.post('/users/@me/messages/search/tabs', searchParams);
+    }
+
+    async deleteSelectedMessages(messages, onProgress = null) {
+        // Disable delete button at the start
+        const deleteButton = document.querySelector('#delete-selected-button');
+        if (deleteButton) {
+            deleteButton.disabled = true;
+            deleteButton.textContent = 'Deleting...';
+        }
+
+        try {
+            const totalMessages = messages.length;
+            let deletedCount = 0;
+            const maxRetries = 5;
+
+            for (const [messageId, channelId] of messages) {
+                let retryCount = 0;
+                let deleted = false;
+
+                while (retryCount < maxRetries && !deleted) {
+                    deleted = await this.deleteMessage(channelId, messageId);
+                    
+                    if (deleted) {
+                        deletedCount++;
+                        if (onProgress) {
+                            onProgress(deletedCount, totalMessages);
+                        }
+                        
+                        // Get the message element to extract its content and attachments
+                        const messageElement = document.querySelector(`.indexsearch-message[data-message-id="${messageId}"]`);
+                        if (messageElement) {
+                            const content = messageElement.querySelector('.indexsearch-content')?.textContent || '';
+                            const attachments = Array.from(messageElement.querySelectorAll('.indexsearch-attachment'))
+                                .map(att => ({
+                                    filename: att.textContent.trim(),
+                                    url: att.querySelector('img')?.src
+                                }))
+                                .filter(att => att.filename || att.url);
+
+                            // Create base message text
+                            let messageText = `Deleted message: ${content}`;
+                            
+                            // Add attachments if they exist
+                            if (attachments.length > 0) {
+                                messageText += '\nAttachments:';
+                                attachments.forEach(attachment => {
+                                    messageText += `\n- ${attachment.filename || 'Unnamed attachment'}`;
+                                });
+                            }
+
+                            Console.delete(messageText, attachments);
+                        }
+                    } else {
+                        retryCount++;
+                        if (retryCount < maxRetries) {
+                            // Random delay between 2-3 seconds
+                            const delayTime = 2000 + Math.random() * 1000;
+                            Console.warn(`Retry ${retryCount}/${maxRetries} in ${delayTime/1000}s...`);
+                            await new Promise(resolve => setTimeout(resolve, delayTime));
+                        } else {
+                            Console.warn(`Failed to delete message ${messageId} after ${maxRetries} attempts`);
+                        }
+                    }
+                }
+
+                // Random delay between 2-3 seconds between messages
+                const delayTime = 2000 + Math.random() * 1000;
+                await new Promise(resolve => setTimeout(resolve, delayTime));
+            }
+
+            return {
+                success: true,
+                deletedCount,
+                total: totalMessages
+            };
+        } catch (error) {
+            Console.error('Error during message deletion:', error);
+            return {
+                success: false,
+                deletedCount: 0,
+                total: messages.length,
+                error
+            };
+        } finally {
+            // Re-enable delete button and reset text when done
+            if (deleteButton) {
+                deleteButton.disabled = false;
+                deleteButton.textContent = 'Delete Selected';
+            }
+        }
+    }
+
 }
 
 module.exports = DiscordAPI; 
