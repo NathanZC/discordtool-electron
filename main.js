@@ -32,11 +32,11 @@ function createWindow() {
                 ...details.responseHeaders,
                 'Content-Security-Policy': [
                     "default-src 'self';" +
-                    "img-src 'self' https://*.discord.com https://cdn.discordapp.com data: blob:;" +
-                    "script-src 'self';" +
+                    "img-src 'self' data: blob: https://*.discord.com https://cdn.discordapp.com https://media.discordapp.net;" +
+                    "script-src 'self' 'unsafe-inline' 'unsafe-hashes';" +
                     "style-src 'self' 'unsafe-inline';" +
-                    "connect-src 'self' https://*.discord.com https://cdn.discordapp.com https://discord.com ws://discord.com wss://discord.com;" +
-                    "media-src 'self' https://*.discord.com https://cdn.discordapp.com blob:;" +
+                    "connect-src 'self' https://*.discord.com https://cdn.discordapp.com https://media.discordapp.net https://discord.com ws://discord.com wss://discord.com;" +
+                    "media-src 'self' blob: https://*.discord.com https://cdn.discordapp.com https://media.discordapp.net;" +
                     "worker-src 'self' blob:;"
                 ]
             }

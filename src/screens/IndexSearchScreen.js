@@ -85,53 +85,21 @@ class IndexSearchScreen extends BaseScreen {
                 <div id="indexscreen-results" class="indexscreen-results">
                     <!-- Initial tabs structure -->
                     <div class="indexsearch-tabs">
-                        <button class="indexsearch-tab-button active" data-tab="messages">
-                            Messages
-                            <span class="indexsearch-tab-button-count">0</span>
-                        </button>
-                        <button class="indexsearch-tab-button" data-tab="links">
-                            Links
-                            <span class="indexsearch-tab-button-count">0</span>
-                        </button>
-                        <button class="indexsearch-tab-button" data-tab="media">
-                            Media
-                            <span class="indexsearch-tab-button-count">0</span>
-                        </button>
-                        <button class="indexsearch-tab-button" data-tab="files">
-                            Files
-                            <span class="indexsearch-tab-button-count">0</span>
-                        </button>
-                        <button class="indexsearch-tab-button" data-tab="pins">
-                            Pins
-                            <span class="indexsearch-tab-button-count">0</span>
-                        </button>
+                        ${IndexSearchScreen.TAB_ORDER.map(tab => `
+                            <button class="indexsearch-tab-button ${tab === 'messages' ? 'active' : ''}" data-tab="${tab}">
+                                ${tab.charAt(0).toUpperCase() + tab.slice(1)}
+                                <span class="indexsearch-tab-button-count">0</span>
+                            </button>
+                        `).join('')}
                     </div>
                     <div class="indexsearch-results-container">
-                        <div class="indexsearch-tab-content active" id="tab-messages">
-                            <div class="indexsearch-messages">
-                                <div class="indexsearch-loading">Loading messages...</div>
+                        ${IndexSearchScreen.TAB_ORDER.map(tab => `
+                            <div class="indexsearch-tab-content ${tab === 'messages' ? 'active' : ''}" id="tab-${tab}">
+                                <div class="indexsearch-messages">
+                                    <div class="indexsearch-loading">Loading ${tab}...</div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="indexsearch-tab-content" id="tab-links">
-                            <div class="indexsearch-messages">
-                                <div class="indexsearch-loading">Loading links...</div>
-                            </div>
-                        </div>
-                        <div class="indexsearch-tab-content" id="tab-media">
-                            <div class="indexsearch-messages">
-                                <div class="indexsearch-loading">Loading media...</div>
-                            </div>
-                        </div>
-                        <div class="indexsearch-tab-content" id="tab-files">
-                            <div class="indexsearch-messages">
-                                <div class="indexsearch-loading">Loading files...</div>
-                            </div>
-                        </div>
-                        <div class="indexsearch-tab-content" id="tab-pins">
-                            <div class="indexsearch-messages">
-                                <div class="indexsearch-loading">Loading pins...</div>
-                            </div>
-                        </div>
+                        `).join('')}
                     </div>
                 </div>
             </div>
@@ -718,65 +686,13 @@ class IndexSearchScreen extends BaseScreen {
             // Format message content to make links clickable
             const formattedContent = msg.content.replace(
                 /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/g, 
-                '<a href="$1" class="indexsearch-link" target="_blank" rel="noopener noreferrer">$1</a>'
+                '<a href="$1" class="indexsearch-link">$1</a>'
             );
 
-            // Helper function to get file type icon
-            const getFileTypeIcon = (filename) => {
-                const ext = filename.split('.').pop().toLowerCase();
-                const fileTypes = {
-                    pdf: '📄', doc: '📝', docx: '📝', txt: '📝',
-                    jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️',
-                    mp4: '🎥', mov: '🎥', avi: '🎥', webm: '🎥',
-                    mp3: '🎵', wav: '🎵', ogg: '🎵',
-                    zip: '📦', rar: '📦', '7z': '📦',
-                    default: '📎'
-                };
-                return fileTypes[ext] || fileTypes.default;
-            };
-
-            // Process attachments based on their type
-            const formatAttachment = (att) => {
-                const isImage = att.content_type?.startsWith('image/');
-                const isVideo = att.content_type?.startsWith('video/');
-                const isAudio = att.content_type?.startsWith('audio/');
-                const isPDF = att.content_type === 'application/pdf' || att.filename.toLowerCase().endsWith('.pdf');
-
-                if (isImage) {
-                    return `
-                        <div class="indexsearch-attachment">
-                            <img src="${att.url}" alt="${att.filename}" loading="lazy">
-                        </div>`;
-                } else if (isVideo) {
-                    return `
-                        <div class="indexsearch-attachment">
-                            <video controls preload="none" poster="${att.proxy_url}">
-                                <source src="${att.url}" type="${att.content_type}">
-                                Your browser does not support the video tag.
-                            </video>
-                        </div>`;
-                } else if (isAudio) {
-                    return `
-                        <div class="indexsearch-attachment-audio">
-                            <audio controls preload="none">
-                                <source src="${att.url}" type="${att.content_type}">
-                                Your browser does not support the audio tag.
-                            </audio>
-                        </div>`;
-                } else {
-                    // Generic file attachment
-                    return `
-                        <div class="indexsearch-attachment-file">
-                            <a href="${att.url}" 
-                               class="indexsearch-file-link"
-                               data-is-pdf="${isPDF}"
-                               download="${att.filename}">
-                                ${getFileTypeIcon(att.filename)} ${att.filename}
-                                ${att.size ? `(${(att.size / 1024 / 1024).toFixed(2)} MB)` : ''}
-                            </a>
-                        </div>`;
-                }
-            };
+            // Use Discord's default avatar if user has no custom avatar
+            const avatarUrl = msg.author.avatar 
+                ? `https://cdn.discordapp.com/avatars/${msg.author.id}/${msg.author.avatar}.webp`
+                : `https://cdn.discordapp.com/embed/avatars/${Number(msg.author.discriminator || '0') % 5}.png`;
 
             return `
                 <div class="indexsearch-message ${isOwnMessage ? 'own-message' : ''}" 
@@ -786,9 +702,9 @@ class IndexSearchScreen extends BaseScreen {
                     <div class="indexsearch-message-header">
                         <span class="indexsearch-message-number">#${this.messageCounters[tabType]}</span>
                         <img 
-                            src="https://cdn.discordapp.com/avatars/${msg.author.id}/${msg.author.avatar}.webp" 
+                            src="${avatarUrl}" 
                             class="indexsearch-avatar" 
-                            onerror="this.src='path/to/default/avatar.png'"
+                            alt="User Avatar"
                         >
                         <span class="indexsearch-username">
                             ${msg.author.global_name || msg.author.username}
@@ -801,14 +717,64 @@ class IndexSearchScreen extends BaseScreen {
                         </button>
                     </div>
                     <div class="indexsearch-content">${formattedContent}</div>
-                    ${msg.attachments.length ? `
-                        <div class="indexsearch-attachments">
-                            ${msg.attachments.map(att => formatAttachment(att)).join('')}
-                        </div>
-                    ` : ''}
+                    ${msg.attachments.map(att => this.formatAttachment(att)).join('')}
                 </div>
             `;
         }).join('');
+    }
+
+    formatAttachment(att) {
+        const isImage = att.content_type?.startsWith('image/');
+        const isVideo = att.content_type?.startsWith('video/');
+        const isAudio = att.content_type?.startsWith('audio/');
+        const isPDF = att.content_type === 'application/pdf' || att.filename.toLowerCase().endsWith('.pdf');
+
+        if (isImage) {
+            return `
+                <div class="indexsearch-attachment">
+                    <img src="${att.url}" alt="${att.filename}" loading="lazy">
+                </div>`;
+        } else if (isVideo) {
+            return `
+                <div class="indexsearch-attachment">
+                    <video controls preload="none" poster="${att.proxy_url}">
+                        <source src="${att.url}" type="${att.content_type}">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>`;
+        } else if (isAudio) {
+            return `
+                <div class="indexsearch-attachment-audio">
+                    <audio controls preload="none">
+                        <source src="${att.url}" type="${att.content_type}">
+                        Your browser does not support the audio tag.
+                    </audio>
+                </div>`;
+        } else {
+            return `
+                <div class="indexsearch-attachment-file">
+                    <a href="${att.url}" 
+                       class="indexsearch-file-link"
+                       data-is-pdf="${isPDF}"
+                       data-filename="${att.filename}">
+                        ${this.getFileTypeIcon(att.filename)} ${att.filename}
+                        ${att.size ? `(${(att.size / 1024 / 1024).toFixed(2)} MB)` : ''}
+                    </a>
+                </div>`;
+        }
+    }
+
+    getFileTypeIcon(filename) {
+        const ext = filename.split('.').pop().toLowerCase();
+        const fileTypes = {
+            pdf: '📄', doc: '📝', docx: '📝', txt: '📝',
+            jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '��️',
+            mp4: '🎥', mov: '🎥', avi: '🎥', webm: '🎥',
+            mp3: '🎵', wav: '🎵', ogg: '🎵',
+            zip: '📦', rar: '📦', '7z': '📦',
+            default: '📎'
+        };
+        return fileTypes[ext] || fileTypes.default;
     }
 
     updateSelectionUI() {

@@ -258,7 +258,7 @@
 }
 
 .indexsearch-attachment img {
-    max-height: 150px;
+    max-height: 300px;
     max-width: 100%;
     object-fit: contain;
     border-radius: 4px;
@@ -422,7 +422,7 @@
     cursor: default;
 }
 .indexsearch-attachment video {
-    max-height: 150px;
-    width: auto;
+    max-height: 400px;
+    max-width: 100%;
     border-radius: 4px;
 }
