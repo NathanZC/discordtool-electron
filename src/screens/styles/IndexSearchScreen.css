@@ -424,5 +424,223 @@
 .indexsearch-attachment video {
     max-height: 400px;
     max-width: 100%;
+    border-radius: 8px;
+    background-color: #000;
+}
+
+/* Add new Discord-style video player styles */
+.discord-video-container {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    margin: 8px 0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+}
+
+.discord-video {
+    width: 100%;
+    display: block;
+    cursor: pointer;
+}
+
+.discord-video::-webkit-media-controls-panel {
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.65));
+}
+
+.discord-video::-webkit-media-controls-play-button {
+    background-color: #fff;
+    border-radius: 50%;
+}
+
+.discord-video::-webkit-media-controls-timeline {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    margin: 0 10px;
+}
+
+.discord-video::-webkit-media-controls-current-time-display,
+.discord-video::-webkit-media-controls-time-remaining-display {
+    color: #fff;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+.discord-video::-webkit-media-controls-volume-slider {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+}
+
+.discord-video-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+    padding: 10px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.discord-video-container:hover .discord-video-controls {
+    opacity: 1;
+}
+
+.discord-video-info {
+    color: #fff;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.discord-video-filename {
+    font-weight: 500;
+    max-width: 70%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.discord-video-size {
+    opacity: 0.8;
+}
+
+/* Add hover effect */
+.discord-video-container:hover {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Update the advanced options styles */
+.indexscreen-search-box .advanced-options-toggle {
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.indexscreen-search-box .filter-options {
+    margin: 0.25rem 0;
+    padding: 1rem;
+    background: #2F3136;
+    border-radius: 6px;
+    border: 1px solid #40444B;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+}
+
+.indexscreen-search-box .filter-options:not(.collapsed) {
+    max-height: 200px;
+    opacity: 1;
+    padding: 1rem;
+}
+
+.indexscreen-search-box .filter-options.collapsed {
+    padding-top: 0;
+    padding-bottom: 0;
+    margin: 0;
+    border-color: transparent;
+}
+
+.indexscreen-search-box .toggle-btn {
+    width: 100%;
+    background: #36393f;
+    border: 1px solid #40444b;
+    color: #dcddde;
+    padding: 0.5rem 0.5rem;
     border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background-color 0.2s ease;
+}
+
+.indexscreen-search-box .toggle-btn:hover {
+    background: rgba(79, 84, 92, 0.3);
+}
+
+.indexscreen-search-box .toggle-arrow {
+    display: inline-block;
+    transition: transform 0.3s ease;
+}
+
+.filter-row {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.date-filter {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.date-filter label {
+    color: #dcddde;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.date-filter input[type="date"] {
+    padding: 0.5rem;
+    background: #202225;
+    border: 1px solid #40444B;
+    border-radius: 4px;
+    color: #dcddde;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.date-filter input[type="date"]:focus {
+    outline: none;
+    border-color: #5865F2;
+    box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.3);
+}
+
+/* Style the date input calendar icon */
+.date-filter input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.7);
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.date-filter input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+.has-filter {
+    margin: 10px 0;
+}
+
+.has-filter-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.has-filter-option {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    user-select: none;
+    background: var(--background-secondary);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.has-filter-option:hover {
+    background: var(--background-tertiary);
+}
+
+.has-filter-option input[type="checkbox"] {
+    margin: 0;
 }

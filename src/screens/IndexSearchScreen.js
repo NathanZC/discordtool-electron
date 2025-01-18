@@ -67,6 +67,25 @@ class IndexSearchScreen extends BaseScreen {
                             </button>
                         </div>
 
+                        <div class="advanced-options-toggle">
+                            <button class="toggle-btn">
+                                <span class="toggle-arrow">▶</span>
+                                Advanced Options
+                            </button>
+                        </div>
+                        <div class="filter-options collapsed">
+                            <div class="filter-row">
+                                <div class="date-filter">
+                                    <label for="afterDate">After Date:</label>
+                                    <input type="date" id="afterDate">
+                                </div>
+                                <div class="date-filter">
+                                    <label for="beforeDate">Before Date:</label>
+                                    <input type="date" id="beforeDate">
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="indexscreen-selection-controls">
                             <span class="indexscreen-selected-count">0 messages selected</span>
                             <button id="indexscreen-select-loaded" class="indexscreen-button" disabled>Select All Loaded</button>
@@ -189,6 +208,10 @@ class IndexSearchScreen extends BaseScreen {
     }
 
     setupEventListeners(container) {
+        // Add a guard to prevent multiple listener setup
+        if (this._listenersInitialized) return;
+        this._listenersInitialized = true;
+
         const searchBtn = container.querySelector('#indexscreen-search-btn');
         const searchInput = container.querySelector('#indexscreen-search-input');
         const resultsContainer = container.querySelector('#indexscreen-results');
@@ -398,6 +421,18 @@ class IndexSearchScreen extends BaseScreen {
                 }
             }
         });
+
+        // Add toggle functionality
+        const toggleBtn = container.querySelector('.advanced-options-toggle .toggle-btn');
+        const filterOptions = container.querySelector('.filter-options');
+        const toggleArrow = container.querySelector('.toggle-arrow');
+        
+        toggleBtn.addEventListener('click', () => {
+            filterOptions.classList.toggle('collapsed');
+            toggleArrow.style.transform = filterOptions.classList.contains('collapsed') 
+                ? 'rotate(0deg)' 
+                : 'rotate(90deg)';
+        });
     }
 
     async loadMore() {
@@ -480,18 +515,22 @@ class IndexSearchScreen extends BaseScreen {
         const resultsContainer = document.querySelector('#indexscreen-results');
         const searchTerm = searchInput.value.trim();
         const onlyMeCheckbox = document.querySelector('#indexscreen-only-me-checkbox');
-        const onlyMe = onlyMeCheckbox?.checked ?? true; // Default to true if checkbox not found
+        const onlyMe = onlyMeCheckbox?.checked ?? true;
+
+        // Get date filter values
+        const beforeDate = document.querySelector('#beforeDate')?.value;
+        const afterDate = document.querySelector('#afterDate')?.value;
 
         // Reset state
         this.currentSearchTerm = searchTerm;
-        this.currentSearchType = 'all';  // Always use 'all' type
+        this.currentSearchType = 'all';
         this.cursors = {};
         this.isLoading = false;
         this.messageCounters = {};
-        this.selectedMessages.clear(); // Clear selections when performing new search
+        this.selectedMessages.clear();
 
         // If search is cleared and Only Me is not checked, return to initial state
-        if (!searchTerm && !onlyMe) {
+        if (!searchTerm && !onlyMe && !beforeDate && !afterDate) {
             // Reset to initial tabs view
             resultsContainer.innerHTML = `
                 <div class="indexsearch-tabs">
@@ -553,14 +592,17 @@ class IndexSearchScreen extends BaseScreen {
 
         resultsContainer.innerHTML = `
             <div class="indexscreen-loading">
-                Searching ${onlyMe ? 'your' : 'all'} messages${searchTerm ? ` containing "${searchTerm}"` : ''}...
+                Searching ${onlyMe ? 'your' : 'all'} messages${searchTerm ? ` containing "${searchTerm}"` : ''}
+                ${beforeDate ? ` before ${beforeDate}` : ''}${afterDate ? ` after ${afterDate}` : ''}...
             </div>
         `;
 
         try {
             const response = await this.api.indexSearch(searchTerm, 'all', {
                 cursor: null,
-                onlyMe: onlyMe
+                onlyMe: onlyMe,
+                beforeDate: beforeDate ? new Date(beforeDate).toISOString() : null,
+                afterDate: afterDate ? new Date(afterDate).toISOString() : null
             });
             
             if (response.ok) {
@@ -735,9 +777,16 @@ class IndexSearchScreen extends BaseScreen {
                     <img src="${att.url}" alt="${att.filename}" loading="lazy">
                 </div>`;
         } else if (isVideo) {
+            // Get thumbnail from proxy_url if available, otherwise use the video URL
+            const posterUrl = att.proxy_url || att.url;
+            
             return `
                 <div class="indexsearch-attachment">
-                    <video controls preload="none" poster="${att.proxy_url}">
+                    <video class="indexsearch-video" 
+                        controls 
+                        playsinline
+                        preload="metadata"
+                        poster="${posterUrl}?format=webp&width=550"
                         <source src="${att.url}" type="${att.content_type}">
                         Your browser does not support the video tag.
                     </video>

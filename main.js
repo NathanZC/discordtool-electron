@@ -92,13 +92,20 @@ function createWindow() {
     });
 
     // do this when done
-    // win.setMenu(null);
+    win.removeMenu();
     win.loadFile('index.html');
 
     // Show window when ready
     win.once('ready-to-show', () => {
         win.maximize();
         win.show();
+    });
+
+    // Add DevTools shortcut
+    win.webContents.on('before-input-event', (event, input) => {
+        if (input.control && input.shift && input.key.toLowerCase() === 'i') {
+            win.webContents.toggleDevTools();
+        }
     });
 
 }

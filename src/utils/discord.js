@@ -1279,16 +1279,28 @@ class DiscordAPI {
 
     async indexSearch(searchTerm, searchType = 'all', options = {}) {
         // Helper function to create tab config
-        const createTabConfig = (has = [], extraParams = {}) => ({
-            sort_by: "timestamp",
-            sort_order: "desc",
-            ...(options.onlyMe ? { author_id: [this.userId] } : {}), // This will now apply to all tab types
-            ...(searchTerm ? { content: searchTerm } : {}),
-            cursor: options.cursor || null,
-            ...(has.length > 0 ? { has } : {}),
-            ...extraParams,
-            limit: extraParams.limit || 15
-        });
+        const createTabConfig = (has = [], extraParams = {}) => {
+            const config = {
+                sort_by: "timestamp",
+                sort_order: "desc",
+                ...(options.onlyMe ? { author_id: [this.userId] } : {}),
+                ...(searchTerm ? { content: searchTerm } : {}),
+                cursor: options.cursor || null,
+                ...(has.length > 0 ? { has } : {}),
+                ...extraParams,
+                limit: extraParams.limit || 15
+            };
+
+            // Add date filters if provided
+            if (options.beforeDate) {
+                config.max_id = this.dateToSnowflake(new Date(options.beforeDate));
+            }
+            if (options.afterDate) {
+                config.min_id = this.dateToSnowflake(new Date(options.afterDate));
+            }
+
+            return config;
+        };
 
         const tabs = {};
 
@@ -1420,6 +1432,13 @@ class DiscordAPI {
                 deleteButton.textContent = 'Delete Selected';
             }
         }
+    }
+
+    // Add this helper method to convert dates to Discord snowflakes
+    dateToSnowflake(date) {
+        const timestamp = date.getTime();
+        const discordEpoch = 1420070400000; // Discord Epoch (2015-01-01)
+        return ((timestamp - discordEpoch) * 4194304).toString();
     }
 
 }
