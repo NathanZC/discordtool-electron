@@ -259,7 +259,8 @@
 
 .indexsearch-attachment img {
     max-height: 150px;
-    object-fit: cover;
+    max-width: 100%;
+    object-fit: contain;
     border-radius: 4px;
 }
 
@@ -419,4 +420,9 @@
 
 .indexsearch-message:not(.own-message) {
     cursor: default;
+}
+.indexsearch-attachment video {
+    max-height: 150px;
+    width: auto;
+    border-radius: 4px;
 }

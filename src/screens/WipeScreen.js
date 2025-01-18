@@ -128,9 +128,9 @@ class WipeScreen extends BaseScreen {
                         <div class="delay-control">
                             <label for="operationDelay">Delay (seconds):</label>
                             <input type="range" id="operationDelay" 
-                                min="0.1" max="10" value="1" step="0.1"
+                                min="0.1" max="10" value="2" step="0.1"
                                 class="delay-slider">
-                            <span class="delay-value">1.0s</span>
+                            <span class="delay-value">2.0s</span>
                         </div>
                         <div class="action-buttons">
                             <button id="getCountsBtn" class="action-btn">

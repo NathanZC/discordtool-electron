@@ -394,6 +394,42 @@ class IndexSearchScreen extends BaseScreen {
             // Reload all tabs with new Only Me setting
             this.performSearch();
         });
+
+        // Add link click handler
+        container.addEventListener('click', (e) => {
+            const link = e.target.closest('.indexsearch-link');
+            if (link) {
+                e.preventDefault();
+                shell.openExternal(link.href);
+            }
+        });
+
+        // Update file click handler
+        container.addEventListener('click', (e) => {
+            const fileLink = e.target.closest('.indexsearch-file-link');
+            if (fileLink) {
+                e.preventDefault();
+                const url = fileLink.href;
+                const isPDF = fileLink.dataset.isPdf === 'true';
+                
+                // For PDFs and other files, trigger download
+                if (isPDF || fileLink.hasAttribute('download')) {
+                    fetch(url)
+                        .then(response => response.blob())
+                        .then(blob => {
+                            const objectUrl = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = objectUrl;
+                            a.download = fileLink.getAttribute('download');
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(objectUrl);
+                            document.body.removeChild(a);
+                        })
+                        .catch(error => Console.error('Error downloading file:', error));
+                }
+            }
+        });
     }
 
     async loadMore() {
@@ -679,6 +715,69 @@ class IndexSearchScreen extends BaseScreen {
             this.messageCounters[tabType]++;
             const isOwnMessage = msg.author.id === this.userId;
             
+            // Format message content to make links clickable
+            const formattedContent = msg.content.replace(
+                /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/g, 
+                '<a href="$1" class="indexsearch-link" target="_blank" rel="noopener noreferrer">$1</a>'
+            );
+
+            // Helper function to get file type icon
+            const getFileTypeIcon = (filename) => {
+                const ext = filename.split('.').pop().toLowerCase();
+                const fileTypes = {
+                    pdf: '📄', doc: '📝', docx: '📝', txt: '📝',
+                    jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️',
+                    mp4: '🎥', mov: '🎥', avi: '🎥', webm: '🎥',
+                    mp3: '🎵', wav: '🎵', ogg: '🎵',
+                    zip: '📦', rar: '📦', '7z': '📦',
+                    default: '📎'
+                };
+                return fileTypes[ext] || fileTypes.default;
+            };
+
+            // Process attachments based on their type
+            const formatAttachment = (att) => {
+                const isImage = att.content_type?.startsWith('image/');
+                const isVideo = att.content_type?.startsWith('video/');
+                const isAudio = att.content_type?.startsWith('audio/');
+                const isPDF = att.content_type === 'application/pdf' || att.filename.toLowerCase().endsWith('.pdf');
+
+                if (isImage) {
+                    return `
+                        <div class="indexsearch-attachment">
+                            <img src="${att.url}" alt="${att.filename}" loading="lazy">
+                        </div>`;
+                } else if (isVideo) {
+                    return `
+                        <div class="indexsearch-attachment">
+                            <video controls preload="none" poster="${att.proxy_url}">
+                                <source src="${att.url}" type="${att.content_type}">
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>`;
+                } else if (isAudio) {
+                    return `
+                        <div class="indexsearch-attachment-audio">
+                            <audio controls preload="none">
+                                <source src="${att.url}" type="${att.content_type}">
+                                Your browser does not support the audio tag.
+                            </audio>
+                        </div>`;
+                } else {
+                    // Generic file attachment
+                    return `
+                        <div class="indexsearch-attachment-file">
+                            <a href="${att.url}" 
+                               class="indexsearch-file-link"
+                               data-is-pdf="${isPDF}"
+                               download="${att.filename}">
+                                ${getFileTypeIcon(att.filename)} ${att.filename}
+                                ${att.size ? `(${(att.size / 1024 / 1024).toFixed(2)} MB)` : ''}
+                            </a>
+                        </div>`;
+                }
+            };
+
             return `
                 <div class="indexsearch-message ${isOwnMessage ? 'own-message' : ''}" 
                      data-message-id="${msg.id}" 
@@ -701,16 +800,10 @@ class IndexSearchScreen extends BaseScreen {
                             Jump
                         </button>
                     </div>
-                    <div class="indexsearch-content">${msg.content}</div>
+                    <div class="indexsearch-content">${formattedContent}</div>
                     ${msg.attachments.length ? `
                         <div class="indexsearch-attachments">
-                            ${msg.attachments.map(att => `
-                                <div class="indexsearch-attachment">
-                                    ${att.content_type?.startsWith('image/') 
-                                        ? `<img src="${att.url}" alt="${att.filename}" style="max-width: 200px;">` 
-                                        : att.filename}
-                                </div>
-                            `).join('')}
+                            ${msg.attachments.map(att => formatAttachment(att)).join('')}
                         </div>
                     ` : ''}
                 </div>
