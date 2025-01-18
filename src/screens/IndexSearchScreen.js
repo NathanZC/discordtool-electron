@@ -23,6 +23,7 @@ class IndexSearchScreen extends BaseScreen {
         this.loadAllInProgress = false;
         this.deleteInProgress = false;
         this.stopDeleteRequested = false;
+        this.sortNewestFirst = true;
     }
 
     async handleMessageJump(channelId, messageId) {
@@ -102,14 +103,18 @@ class IndexSearchScreen extends BaseScreen {
                 </div>
 
                 <div id="indexscreen-results" class="indexscreen-results">
-                    <!-- Initial tabs structure -->
-                    <div class="indexsearch-tabs">
-                        ${IndexSearchScreen.TAB_ORDER.map(tab => `
-                            <button class="indexsearch-tab-button ${tab === 'messages' ? 'active' : ''}" data-tab="${tab}">
-                                ${tab.charAt(0).toUpperCase() + tab.slice(1)}
-                                <span class="indexsearch-tab-button-count">0</span>
-                            </button>
-                        `).join('')}
+                    <div class="indexsearch-tabs-container">
+                        <div class="indexsearch-tabs">
+                            ${IndexSearchScreen.TAB_ORDER.map(tab => `
+                                <button class="indexsearch-tab-button ${tab === 'messages' ? 'active' : ''}" data-tab="${tab}">
+                                    ${tab.charAt(0).toUpperCase() + tab.slice(1)}
+                                    <span class="indexsearch-tab-button-count">0</span>
+                                </button>
+                            `).join('')}
+                        </div>
+                        <button class="indexsearch-sort-button" title="Toggle sort order">
+                            <span class="sort-icon">${this.sortNewestFirst ? '↓' : '↑'}</span> ${this.sortNewestFirst ? 'Newest' : 'Oldest'} First
+                        </button>
                     </div>
                     <div class="indexsearch-results-container">
                         ${IndexSearchScreen.TAB_ORDER.map(tab => `
@@ -139,10 +144,37 @@ class IndexSearchScreen extends BaseScreen {
             const onlyMe = onlyMeCheckbox?.checked ?? true; // Default to true if checkbox not found
 
             // Make a single request for all tab types with onlyMe parameter
-            const response = await this.api.indexSearch('', 'all', { onlyMe });
+            const response = await this.api.indexSearch('', 'all', { onlyMe, sortNewestFirst: this.sortNewestFirst });
             
             if (response.ok) {
                 const data = await response.json();
+                
+                // Update the results container with preserved structure
+                const resultsContainer = document.querySelector('#indexscreen-results');
+                resultsContainer.innerHTML = `
+                    <div class="indexsearch-tabs-container">
+                        <div class="indexsearch-tabs">
+                            ${IndexSearchScreen.TAB_ORDER.map(tab => `
+                                <button class="indexsearch-tab-button ${tab === 'messages' ? 'active' : ''}" data-tab="${tab}">
+                                    ${tab.charAt(0).toUpperCase() + tab.slice(1)}
+                                    <span class="indexsearch-tab-button-count">0</span>
+                                </button>
+                            `).join('')}
+                        </div>
+                        <button class="indexsearch-sort-button" title="Toggle sort order">
+                            <span class="sort-icon">${this.sortNewestFirst ? '↓' : '↑'}</span> ${this.sortNewestFirst ? 'Newest' : 'Oldest'} First
+                        </button>
+                    </div>
+                    <div class="indexsearch-results-container">
+                        ${IndexSearchScreen.TAB_ORDER.map(tab => `
+                            <div class="indexsearch-tab-content ${tab === 'messages' ? 'active' : ''}" id="tab-${tab}">
+                                <div class="indexsearch-messages">
+                                    <div class="indexsearch-loading">Loading ${tab}...</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
                 
                 // Process each tab's data
                 const tabsToProcess = ['messages', 'links', 'media', 'files', 'pins'];
@@ -433,6 +465,14 @@ class IndexSearchScreen extends BaseScreen {
                 ? 'rotate(0deg)' 
                 : 'rotate(90deg)';
         });
+
+        // Update sort button listener to use event delegation
+        container.addEventListener('click', (e) => {
+            const sortButton = e.target.closest('.indexsearch-sort-button');
+            if (sortButton) {
+                this.toggleSortOrder();
+            }
+        });
     }
 
     async loadMore() {
@@ -464,7 +504,8 @@ class IndexSearchScreen extends BaseScreen {
                         timestamp: cursor.timestamp,
                         type: "timestamp"
                     },
-                    onlyMe: onlyMe
+                    onlyMe: onlyMe,
+                    sortNewestFirst: this.sortNewestFirst
                 }
             );
 
@@ -529,68 +570,21 @@ class IndexSearchScreen extends BaseScreen {
         this.messageCounters = {};
         this.selectedMessages.clear();
 
-        // If search is cleared and Only Me is not checked, return to initial state
-        if (!searchTerm && !onlyMe && !beforeDate && !afterDate) {
-            // Reset to initial tabs view
-            resultsContainer.innerHTML = `
-                <div class="indexsearch-tabs">
-                    <button class="indexsearch-tab-button active" data-tab="messages">
-                        Messages
-                        <span class="indexsearch-tab-button-count">0</span>
-                    </button>
-                    <button class="indexsearch-tab-button" data-tab="links">
-                        Links
-                        <span class="indexsearch-tab-button-count">0</span>
-                    </button>
-                    <button class="indexsearch-tab-button" data-tab="media">
-                        Media
-                        <span class="indexsearch-tab-button-count">0</span>
-                    </button>
-                    <button class="indexsearch-tab-button" data-tab="files">
-                        Files
-                        <span class="indexsearch-tab-button-count">0</span>
-                    </button>
-                    <button class="indexsearch-tab-button" data-tab="pins">
-                        Pins
-                        <span class="indexsearch-tab-button-count">0</span>
-                    </button>
-                </div>
-                <div class="indexsearch-results-container">
-                    <div class="indexsearch-tab-content active" id="tab-messages">
-                        <div class="indexsearch-messages">
-                            <div class="indexsearch-loading">Loading messages...</div>
-                        </div>
-                    </div>
-                    <div class="indexsearch-tab-content" id="tab-links">
-                        <div class="indexsearch-messages">
-                            <div class="indexsearch-loading">Loading links...</div>
-                        </div>
-                    </div>
-                    <div class="indexsearch-tab-content" id="tab-media">
-                        <div class="indexsearch-messages">
-                            <div class="indexsearch-loading">Loading media...</div>
-                        </div>
-                    </div>
-                    <div class="indexsearch-tab-content" id="tab-files">
-                        <div class="indexsearch-messages">
-                            <div class="indexsearch-loading">Loading files...</div>
-                        </div>
-                    </div>
-                    <div class="indexsearch-tab-content" id="tab-pins">
-                        <div class="indexsearch-messages">
-                            <div class="indexsearch-loading">Loading pins...</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // Re-setup event listeners and load initial content
-            this.setupEventListeners(document);
-            this.loadInitialContent();
-            return;
-        }
-
+        // Preserve the tabs container structure
         resultsContainer.innerHTML = `
+            <div class="indexsearch-tabs-container">
+                <div class="indexsearch-tabs">
+                    ${IndexSearchScreen.TAB_ORDER.map(tab => `
+                        <button class="indexsearch-tab-button ${tab === 'messages' ? 'active' : ''}" data-tab="${tab}">
+                            ${tab.charAt(0).toUpperCase() + tab.slice(1)}
+                            <span class="indexsearch-tab-button-count">0</span>
+                        </button>
+                    `).join('')}
+                </div>
+                <button class="indexsearch-sort-button" title="Toggle sort order">
+                    <span class="sort-icon">${this.sortNewestFirst ? '↓' : '↑'}</span> ${this.sortNewestFirst ? 'Newest' : 'Oldest'} First
+                </button>
+            </div>
             <div class="indexscreen-loading">
                 Searching ${onlyMe ? 'your' : 'all'} messages${searchTerm ? ` containing "${searchTerm}"` : ''}
                 ${beforeDate ? ` before ${beforeDate}` : ''}${afterDate ? ` after ${afterDate}` : ''}...
@@ -602,7 +596,8 @@ class IndexSearchScreen extends BaseScreen {
                 cursor: null,
                 onlyMe: onlyMe,
                 beforeDate: beforeDate ? new Date(beforeDate).toISOString() : null,
-                afterDate: afterDate ? new Date(afterDate).toISOString() : null
+                afterDate: afterDate ? new Date(afterDate).toISOString() : null,
+                sortNewestFirst: this.sortNewestFirst
             });
             
             if (response.ok) {
@@ -645,11 +640,9 @@ class IndexSearchScreen extends BaseScreen {
                         <div class="indexsearch-tab-content ${isActive ? 'active' : ''}" 
                              id="tab-${tabName}">
                             <div class="indexsearch-messages">
-                                ${(!searchTerm && !onlyMe && tabName === 'messages')
-                                    ? '<div class="indexsearch-no-results">Enter a search term to find messages</div>'
-                                    : tabData.total_results > 0 
-                                        ? this.formatMessages(tabData.messages, tabName)
-                                        : `<div class="indexsearch-no-results">No ${displayName} found</div>`}
+                                ${tabData.total_results > 0 
+                                    ? this.formatMessages(tabData.messages, tabName)
+                                    : `<div class="indexsearch-no-results">No ${displayName} found</div>`}
                             </div>
                             ${tabData.total_results > this.loadedResults[tabName] 
                                 ? `<div class="indexsearch-loading-more">
@@ -665,29 +658,16 @@ class IndexSearchScreen extends BaseScreen {
                 tabsHtml += '</div>';
                 contentHtml += '</div>';
 
-                // Set the HTML and add event listeners
-                resultsContainer.innerHTML = tabsHtml + contentHtml;
-
-                // Add click handlers for tabs
-                const tabButtons = resultsContainer.querySelectorAll('.indexsearch-tab-button');
-                tabButtons.forEach(button => {
-                    button.addEventListener('click', () => {
-                        // Remove active class from all tabs
-                        tabButtons.forEach(btn => btn.classList.remove('active'));
-                        resultsContainer.querySelectorAll('.indexsearch-tab-content')
-                            .forEach(content => content.classList.remove('active'));
-
-                        // Add active class to clicked tab
-                        button.classList.add('active');
-                        const tabContent = resultsContainer.querySelector(`#tab-${button.dataset.tab}`);
-                        if (tabContent) {
-                            tabContent.classList.add('active');
-                        }
-                    });
-                });
-
-                // Update Load All button state
-                this.updateLoadAllButtonState();
+                // Update the results container while preserving the tabs container structure
+                resultsContainer.innerHTML = `
+                    <div class="indexsearch-tabs-container">
+                        ${tabsHtml}
+                        <button class="indexsearch-sort-button" title="Toggle sort order">
+                            <span class="sort-icon">${this.sortNewestFirst ? '↓' : '↑'}</span> ${this.sortNewestFirst ? 'Newest' : 'Oldest'} First
+                        </button>
+                    </div>
+                    ${contentHtml}
+                `;
 
             } else {
                 resultsContainer.innerHTML = `
@@ -708,11 +688,6 @@ class IndexSearchScreen extends BaseScreen {
 
     formatMessages(messages, tabType) {
         if (!messages || messages.length === 0) {
-            const onlyMeCheckbox = document.querySelector('#indexscreen-only-me-checkbox');
-            const onlyMe = onlyMeCheckbox?.checked ?? true;
-            if (tabType === 'messages' && !onlyMe) {
-                return '<div class="indexsearch-no-results">Enter a search term to find messages</div>';
-            }
             return '<div class="indexsearch-no-results">No results found</div>';
         }
         
@@ -1008,6 +983,15 @@ class IndexSearchScreen extends BaseScreen {
         } else {
             loadAllBtn.textContent = 'All Loaded';
         }
+    }
+
+    toggleSortOrder() {
+        this.sortNewestFirst = !this.sortNewestFirst;
+        const sortButton = document.querySelector('.indexsearch-sort-button');
+        if (sortButton) {
+            sortButton.innerHTML = `<span class="sort-icon">${this.sortNewestFirst ? '↓' : '↑'}</span> ${this.sortNewestFirst ? 'Newest' : 'Oldest'} First`;
+        }
+        this.performSearch();
     }
 }
 

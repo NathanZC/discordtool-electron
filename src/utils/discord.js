@@ -1282,7 +1282,7 @@ class DiscordAPI {
         const createTabConfig = (has = [], extraParams = {}) => {
             const config = {
                 sort_by: "timestamp",
-                sort_order: "desc",
+                sort_order: options.sortNewestFirst ? "desc" : "asc",
                 ...(options.onlyMe ? { author_id: [this.userId] } : {}),
                 ...(searchTerm ? { content: searchTerm } : {}),
                 cursor: options.cursor || null,
