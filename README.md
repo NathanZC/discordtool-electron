@@ -65,22 +65,7 @@ npm run build
 - `S` Save all loaded media
 - `F` Toggle fullscreen
 
-## Best Practices
-
-1. **Message Management**
-   - Use date filters to target specific time periods
-   - Enable "Only Me" when managing personal messages
-   - Set reasonable delays to avoid rate limits
-
-2. **Media Handling**
-   - Set save location before starting downloads
-   - Use filters to find specific content types
-   - Let initial loading complete for smoother operation
-
-3. **Search Operations**
-   - Start with broad searches, then refine
-   - Use channel filters for focused results
-   - Check message counts before bulk operations
+## Download
 
 ## License
 
