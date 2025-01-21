@@ -280,6 +280,10 @@ class MediaViewerScreen extends BaseScreen {
                                     <span class="shortcut-key">S</span>
                                     <span>Save All</span>
                                 </div>
+                                <div class="shortcut-item">
+                                    <span class="shortcut-key">F</span>
+                                    <span>Toggle Fullscreen</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1515,6 +1519,14 @@ class MediaViewerScreen extends BaseScreen {
                     Console.error('No save location set. Please set a save location first.');
                 }
                 break;
+            case 'f':
+                this.toggleFullscreen();
+                break;
+            case 'escape':
+                if (this.isFullscreen()) {
+                    this.exitFullscreen();
+                }
+                break;
         }
     }
 
@@ -1601,6 +1613,11 @@ class MediaViewerScreen extends BaseScreen {
         // Clear known content hashes
         this.knownContentHashes.clear();
         Console.log('Cleared known content hashes');
+        
+        // Exit fullscreen if active
+        if (this.isFullscreen()) {
+            this.exitFullscreen();
+        }
         
         Console.success('MediaViewer cleanup completed');
     }
@@ -1783,6 +1800,45 @@ class MediaViewerScreen extends BaseScreen {
         // Jump to the message
         const { shell } = require('@electron/remote');
         shell.openExternal(`discord://discord.com/channels/@me/${channelId}/${messageId}`);
+    }
+
+    isFullscreen() {
+        const mediaViewerContent = this.container.querySelector('.media-viewer-content');
+        return mediaViewerContent?.classList.contains('fullscreen');
+    }
+
+    toggleFullscreen() {
+        if (this.isFullscreen()) {
+            this.exitFullscreen();
+        } else {
+            this.enterFullscreen();
+        }
+    }
+
+    enterFullscreen() {
+        const mediaViewerContent = this.container.querySelector('.media-viewer-content');
+        if (!mediaViewerContent) return;
+        
+        mediaViewerContent.classList.add('fullscreen');
+        
+        // Force resize handling for current media
+        const currentElement = document.querySelector('#mediaContent img, #mediaContent video');
+        if (currentElement && this.mediaList[this.currentIndex]) {
+            this.adjustMediaSize(currentElement, this.mediaList[this.currentIndex]);
+        }
+    }
+
+    exitFullscreen() {
+        const mediaViewerContent = this.container.querySelector('.media-viewer-content');
+        if (!mediaViewerContent) return;
+        
+        mediaViewerContent.classList.remove('fullscreen');
+        
+        // Force resize handling for current media
+        const currentElement = document.querySelector('#mediaContent img, #mediaContent video');
+        if (currentElement && this.mediaList[this.currentIndex]) {
+            this.adjustMediaSize(currentElement, this.mediaList[this.currentIndex]);
+        }
     }
 }
 

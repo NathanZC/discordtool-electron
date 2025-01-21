@@ -760,3 +760,31 @@
     gap: 12px;
     position: relative;
 }
+
+/* Add these styles at the end of the file */
+
+.media-viewer-content.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    background: #2F3136;
+    padding: 20px;
+}
+
+.media-viewer-content.fullscreen .media-container {
+    height: calc(100vh - 180px);
+}
+
+.media-viewer-content.fullscreen .media-content {
+    width: 100%;
+    height: 100%;
+}
+
+.media-viewer-content.fullscreen .media-content img,
+.media-viewer-content.fullscreen .media-content video {
+    max-height: calc(100vh - 200px);
+    max-width: 100%;
+}
