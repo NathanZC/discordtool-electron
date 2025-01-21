@@ -12,19 +12,19 @@ Fast and efficient Discord data manager with enhanced search, media downloading,
 
 *Note: Requires Discord token for authentication. All operations are client-side.*
 
+## Key Features
+
+### Enhanced Search
+- Global search across all DMs at once
+- Advanced filtering by date, content type, and author
+- Bulk message management and deletion for filtered messages
+- Real-time search updates with progressive loading
+- Direct message jumping capability
+
 <div align="center">
   <img src="https://github.com/user-attachments/assets/1f0f19a8-3ebe-4c68-b049-0f4efd67d901" alt="Discord Tool Search Interface" width="800"/>
   <p><em>Enhanced Search Interface with Advanced Filtering</em></p>
 </div>
-
-## Key Features
-
-### Enhanced Search
-- Global search across all DMs and servers
-- Advanced filtering by date, content type, and author
-- Bulk message management and deletion
-- Real-time search updates with progressive loading
-- Direct message jumping capability
 
 ### Media Viewer
 - Fast media browsing with smart caching and preloading
