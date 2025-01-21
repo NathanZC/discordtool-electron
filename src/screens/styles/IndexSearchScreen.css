@@ -655,3 +655,62 @@
     font-size: 1.1rem;
     line-height: 1;
 }
+
+.has-filter {
+    display: flex;
+    flex-direction: column;
+    background: #2F3136;
+    border: 1px solid #40444B;
+    border-radius: 4px;
+    padding: 0.5rem;
+    width: 100%;
+}
+
+.has-filter-label {
+    color: #dcddde;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid #40444B;
+    margin-bottom: 0.35rem;
+}
+
+.has-filter-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 0.35rem;
+    padding-left: 0.5rem;
+}
+
+.has-filter-options label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #dcddde;
+    font-size: 0.8rem;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    padding: 0.15rem 0;
+}
+
+.has-filter-options input[type="checkbox"] {
+    width: 12px;
+    height: 12px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: #5865F2;
+}
+
+.has-filter-options label:hover {
+    color: #fff;
+    background: rgba(88, 101, 242, 0.1);
+    border-radius: 3px;
+    padding: 0.15rem 0.35rem;
+    margin-left: -0.35rem;
+}
+
+/* Remove the old content-filter styles */
+.content-filter {
+    display: none;
+}

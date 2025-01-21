@@ -1280,13 +1280,26 @@ class DiscordAPI {
     async indexSearch(searchTerm, searchType = 'all', options = {}) {
         // Helper function to create tab config
         const createTabConfig = (has = [], extraParams = {}) => {
+            // Create a Set to ensure unique values
+            const uniqueHas = new Set(has);
+            
+            // Add media filter options
+            if (options.hasImage) uniqueHas.add('image');
+            if (options.hasVideo) uniqueHas.add('video');
+            if (options.hasEmbed) uniqueHas.add('embed');
+            if (options.hasPoll) uniqueHas.add('poll');
+            if (options.hasSound) uniqueHas.add('sound');
+            if (options.hasSticker) uniqueHas.add('sticker');
+            if (options.hasForward) uniqueHas.add('forward');
+
             const config = {
                 sort_by: "timestamp",
                 sort_order: options.sortNewestFirst ? "desc" : "asc",
                 ...(options.onlyMe ? { author_id: [this.userId] } : {}),
+                ...(options.excludeMe ? { not_author_id: [this.userId] } : {}),
                 ...(searchTerm ? { content: searchTerm } : {}),
                 cursor: options.cursor || null,
-                ...(has.length > 0 ? { has } : {}),
+                ...(uniqueHas.size > 0 ? { has: Array.from(uniqueHas) } : {}),
                 ...extraParams,
                 limit: extraParams.limit || 15
             };
@@ -1439,6 +1452,131 @@ class DiscordAPI {
         const timestamp = date.getTime();
         const discordEpoch = 1420070400000; // Discord Epoch (2015-01-01)
         return ((timestamp - discordEpoch) * 4194304).toString();
+    }
+
+    async getAllDMsMedia(options = {}) {
+        const {
+            cursor = null,
+            limit = 25,
+            mediaTypes = {
+                images: true,
+                videos: true,
+                gifs: true
+            }
+        } = options;
+
+        try {
+            // Create search parameters for the index search
+            const searchParams = {
+                tabs: {
+                    media: {
+                        sort_by: "timestamp",
+                        sort_order: "desc",
+                        has: ['file'],
+                        limit: Math.min(limit, 25)
+                    }
+                },
+                track_exact_total_hits: true
+            };
+
+            // Add cursor if provided
+            if (cursor) {
+                searchParams.tabs.media.cursor = cursor;
+            }
+
+            // Make the request
+            const response = await this.post('/users/@me/messages/search/tabs', searchParams);
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                if (errorData.code === 50001) {
+                    throw {
+                        code: 50001,
+                        message: 'Missing Access',
+                        userMessage: 'Cannot access messages.'
+                    };
+                }
+                throw new Error(`Failed to fetch DM media: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const mediaItems = [];
+
+            // Process the messages from the media tab
+            if (data.tabs.media?.messages) {
+                for (const message of data.tabs.media.messages.flat()) {
+                    // Process attachments
+                    if (message.attachments) {
+                        for (const attachment of message.attachments) {
+                            const contentType = attachment.content_type || '';
+                            const isGif = contentType === 'image/gif' || 
+                                        attachment.filename.toLowerCase().endsWith('.gif');
+                            
+                            if (mediaTypes.images && contentType.startsWith('image/') && !isGif) {
+                                mediaItems.push({
+                                    type: 'image',
+                                    url: attachment.url,
+                                    filename: attachment.filename,
+                                    messageId: message.id,
+                                    timestamp: message.timestamp,
+                                    size: attachment.size,
+                                    channelId: message.channel_id,
+                                    dimensions: {
+                                        width: attachment.width,
+                                        height: attachment.height
+                                    }
+                                });
+                            } else if (mediaTypes.videos && contentType.startsWith('video/')) {
+                                mediaItems.push({
+                                    type: 'video',
+                                    url: attachment.url,
+                                    filename: attachment.filename,
+                                    messageId: message.id,
+                                    timestamp: message.timestamp,
+                                    size: attachment.size,
+                                    channelId: message.channel_id,
+                                    dimensions: {
+                                        width: attachment.width,
+                                        height: attachment.height
+                                    }
+                                });
+                            } else if (mediaTypes.gifs && isGif) {
+                                mediaItems.push({
+                                    type: 'gif',
+                                    url: attachment.url,
+                                    filename: attachment.filename,
+                                    messageId: message.id,
+                                    timestamp: message.timestamp,
+                                    size: attachment.size,
+                                    channelId: message.channel_id,
+                                    dimensions: {
+                                        width: attachment.width,
+                                        height: attachment.height
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Return the results with cursor-based pagination info
+            // We have more items if we received messages and a cursor
+            console.log("data", data.tabs.media);
+            const hasItems = data.tabs.media?.messages?.length > 0;
+            const hasCursor = data.tabs.media?.cursor != null;
+            console.log("hasItems, hasCursor", hasItems, hasCursor);
+            return {
+                media: mediaItems,
+                total: data.tabs.media?.total_results || 0,
+                cursor: data.tabs.media?.cursor || null,
+                hasMore: hasItems && hasCursor // Only true if we have both messages and a cursor
+            };
+
+        } catch (error) {
+            Console.error('Error fetching all DMs media:', error);
+            throw error;
+        }
     }
 
 }

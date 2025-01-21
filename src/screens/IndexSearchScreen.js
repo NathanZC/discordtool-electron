@@ -9,6 +9,7 @@ class IndexSearchScreen extends BaseScreen {
 
     constructor(token, userId, preloadedData = null) {
         super(token);
+        this.store = new Store();
         this.api = new DiscordAPI(token, userId);
         this.userId = userId;
         this.isLoading = false;
@@ -24,6 +25,16 @@ class IndexSearchScreen extends BaseScreen {
         this.deleteInProgress = false;
         this.stopDeleteRequested = false;
         this.sortNewestFirst = true;
+        this.videoVolume = this.loadVolumeSetting();
+    }
+
+    loadVolumeSetting() {
+        return this.store.get('mediaViewer.videoVolume', 0.5);
+    }
+
+    saveVolumeSetting(volume) {
+        this.store.set('mediaViewer.videoVolume', volume);
+        this.videoVolume = volume;
     }
 
     async handleMessageJump(channelId, messageId) {
@@ -83,6 +94,41 @@ class IndexSearchScreen extends BaseScreen {
                                 <div class="date-filter">
                                     <label for="beforeDate">Before Date:</label>
                                     <input type="date" id="beforeDate">
+                                </div>
+                            </div>
+                            <div class="filter-row">
+                                <div class="has-filter">
+                                    <span class="has-filter-label">Has:</span>
+                                    <div class="has-filter-options">
+                                        <label>
+                                            <input type="checkbox" id="hasImage">
+                                            Image
+                                        </label>
+                                        <label>
+                                            <input type="checkbox" id="hasVideo">
+                                            Video
+                                        </label>
+                                        <label>
+                                            <input type="checkbox" id="hasEmbed">
+                                            Embed
+                                        </label>
+                                        <label>
+                                            <input type="checkbox" id="hasPoll">
+                                            Poll
+                                        </label>
+                                        <label>
+                                            <input type="checkbox" id="hasSound">
+                                            Sound
+                                        </label>
+                                        <label>
+                                            <input type="checkbox" id="hasSticker">
+                                            Sticker
+                                        </label>
+                                        <label>
+                                            <input type="checkbox" id="hasForward">
+                                            Forward
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -318,7 +364,7 @@ class IndexSearchScreen extends BaseScreen {
         selectLoadedBtn.addEventListener('click', () => {
             // Check if all visible messages are selected
             const activeTab = document.querySelector('.indexsearch-tab-content.active');
-            const ownMessages = activeTab.querySelectorAll('.indexsearch-message.own-message');
+            const ownMessages = activeTab.querySelectorAll('.indexsearch-message.own-message:not(.call-message)');
             const allSelected = Array.from(ownMessages).every(msg => 
                 this.selectedMessages.has(msg.dataset.messageId)
             );
@@ -391,9 +437,12 @@ class IndexSearchScreen extends BaseScreen {
             const messageElement = e.target.closest('.indexsearch-message');
             // Only handle clicks directly on the message, not on buttons or links within it
             if (messageElement && !e.target.closest('button') && !e.target.closest('a') && !this.deleteInProgress) {
-                // Check if it's the user's own message
-                if (messageElement.dataset.authorId !== this.userId) {
-                    return; // Ignore clicks on messages that aren't yours
+                // Check if it's the user's own message and has valid type
+                const messageType = parseInt(messageElement.dataset.messageType);
+                const isValidType = messageType === 0 || (messageType >= 6 && messageType <= 21);
+                
+                if (messageElement.dataset.authorId !== this.userId || !isValidType) {
+                    return; // Ignore clicks on messages that aren't yours or have invalid type
                 }
                 
                 const messageId = messageElement.dataset.messageId;
@@ -473,6 +522,27 @@ class IndexSearchScreen extends BaseScreen {
                 this.toggleSortOrder();
             }
         });
+
+        // Add video volume listener using event delegation
+        container.addEventListener('loadeddata', (e) => {
+            if (e.target.tagName === 'VIDEO') {
+                e.target.volume = this.videoVolume;
+            }
+        }, true);
+
+        container.addEventListener('volumechange', (e) => {
+            if (e.target.tagName === 'VIDEO') {
+                const newVolume = e.target.volume;
+                this.saveVolumeSetting(newVolume);
+                
+                // Update all other videos on the page
+                document.querySelectorAll('video').forEach(video => {
+                    if (video !== e.target) {
+                        video.volume = newVolume;
+                    }
+                });
+            }
+        }, true);
     }
 
     async loadMore() {
@@ -494,8 +564,19 @@ class IndexSearchScreen extends BaseScreen {
         this.isLoading = true;
         
         try {
+            // Get all filter values
             const onlyMeCheckbox = document.querySelector('#indexscreen-only-me-checkbox');
             const onlyMe = onlyMeCheckbox?.checked || false;
+            const beforeDate = document.querySelector('#beforeDate')?.value;
+            const afterDate = document.querySelector('#afterDate')?.value;
+            const hasImage = document.querySelector('#hasImage')?.checked ?? false;
+            const hasVideo = document.querySelector('#hasVideo')?.checked ?? false;
+            const hasEmbed = document.querySelector('#hasEmbed')?.checked ?? false;
+            const hasPoll = document.querySelector('#hasPoll')?.checked ?? false;
+            const hasSound = document.querySelector('#hasSound')?.checked ?? false;
+            const hasSticker = document.querySelector('#hasSticker')?.checked ?? false;
+            const hasForward = document.querySelector('#hasForward')?.checked ?? false;
+
             const response = await this.api.indexSearch(
                 this.currentSearchTerm, 
                 tabType, 
@@ -505,6 +586,15 @@ class IndexSearchScreen extends BaseScreen {
                         type: "timestamp"
                     },
                     onlyMe: onlyMe,
+                    beforeDate: beforeDate ? new Date(beforeDate).toISOString() : null,
+                    afterDate: afterDate ? new Date(afterDate).toISOString() : null,
+                    hasImage: hasImage,
+                    hasVideo: hasVideo,
+                    hasEmbed: hasEmbed,
+                    hasPoll: hasPoll,
+                    hasSound: hasSound,
+                    hasSticker: hasSticker,
+                    hasForward: hasForward,
                     sortNewestFirst: this.sortNewestFirst
                 }
             );
@@ -561,6 +651,15 @@ class IndexSearchScreen extends BaseScreen {
         // Get date filter values
         const beforeDate = document.querySelector('#beforeDate')?.value;
         const afterDate = document.querySelector('#afterDate')?.value;
+        
+        // Get media filter values
+        const hasImage = document.querySelector('#hasImage')?.checked ?? false;
+        const hasVideo = document.querySelector('#hasVideo')?.checked ?? false;
+        const hasEmbed = document.querySelector('#hasEmbed')?.checked ?? false;
+        const hasPoll = document.querySelector('#hasPoll')?.checked ?? false;
+        const hasSound = document.querySelector('#hasSound')?.checked ?? false;
+        const hasSticker = document.querySelector('#hasSticker')?.checked ?? false;
+        const hasForward = document.querySelector('#hasForward')?.checked ?? false;
 
         // Reset state
         this.currentSearchTerm = searchTerm;
@@ -587,7 +686,11 @@ class IndexSearchScreen extends BaseScreen {
             </div>
             <div class="indexscreen-loading">
                 Searching ${onlyMe ? 'your' : 'all'} messages${searchTerm ? ` containing "${searchTerm}"` : ''}
-                ${beforeDate ? ` before ${beforeDate}` : ''}${afterDate ? ` after ${afterDate}` : ''}...
+                ${beforeDate ? ` before ${beforeDate}` : ''}${afterDate ? ` after ${afterDate}` : ''}
+                ${hasImage ? ' with images' : ''}${hasVideo ? ' with videos' : ''}
+                ${hasEmbed ? ' with embeds' : ''}${hasPoll ? ' with polls' : ''}
+                ${hasSound ? ' with sounds' : ''}${hasSticker ? ' with stickers' : ''}
+                ${hasForward ? ' with forwards' : ''}...
             </div>
         `;
 
@@ -597,6 +700,13 @@ class IndexSearchScreen extends BaseScreen {
                 onlyMe: onlyMe,
                 beforeDate: beforeDate ? new Date(beforeDate).toISOString() : null,
                 afterDate: afterDate ? new Date(afterDate).toISOString() : null,
+                hasImage: hasImage,
+                hasVideo: hasVideo,
+                hasEmbed: hasEmbed,
+                hasPoll: hasPoll,
+                hasSound: hasSound,
+                hasSticker: hasSticker,
+                hasForward: hasForward,
                 sortNewestFirst: this.sortNewestFirst
             });
             
@@ -699,6 +809,7 @@ class IndexSearchScreen extends BaseScreen {
         return flatMessages.map((msg, index) => {
             this.messageCounters[tabType]++;
             const isOwnMessage = msg.author.id === this.userId;
+            const isCallMessage = msg.type === 3; // Discord call message type
             
             // Format message content to make links clickable
             const formattedContent = msg.content.replace(
@@ -712,10 +823,11 @@ class IndexSearchScreen extends BaseScreen {
                 : `https://cdn.discordapp.com/embed/avatars/${Number(msg.author.discriminator || '0') % 5}.png`;
 
             return `
-                <div class="indexsearch-message ${isOwnMessage ? 'own-message' : ''}" 
+                <div class="indexsearch-message ${isOwnMessage ? 'own-message' : ''} ${isCallMessage ? 'call-message' : ''}" 
                      data-message-id="${msg.id}" 
                      data-channel-id="${msg.channel_id}"
-                     data-author-id="${msg.author.id}">
+                     data-author-id="${msg.author.id}"
+                     data-message-type="${msg.type}">
                     <div class="indexsearch-message-header">
                         <span class="indexsearch-message-number">#${this.messageCounters[tabType]}</span>
                         <img 
@@ -752,16 +864,14 @@ class IndexSearchScreen extends BaseScreen {
                     <img src="${att.url}" alt="${att.filename}" loading="lazy">
                 </div>`;
         } else if (isVideo) {
-            // Get thumbnail from proxy_url if available, otherwise use the video URL
-            const posterUrl = att.proxy_url || att.url;
-            
             return `
                 <div class="indexsearch-attachment">
                     <video class="indexsearch-video" 
                         controls 
                         playsinline
                         preload="metadata"
-                        poster="${posterUrl}?format=webp&width=550"
+                        volume="${this.videoVolume}"
+                        poster="${att.proxy_url || att.url}?format=webp&width=550"
                         <source src="${att.url}" type="${att.content_type}">
                         Your browser does not support the video tag.
                     </video>
@@ -850,9 +960,14 @@ class IndexSearchScreen extends BaseScreen {
 
         const messages = activeTab.querySelectorAll('.indexsearch-message.own-message');
         messages.forEach(message => {
-            const messageId = message.dataset.messageId;
-            const channelId = message.dataset.channelId;
-            this.selectedMessages.set(messageId, channelId);
+            const messageType = parseInt(message.dataset.messageType);
+            const isValidType = messageType === 0 || (messageType >= 6 && messageType <= 21);
+            
+            if (isValidType) {
+                const messageId = message.dataset.messageId;
+                const channelId = message.dataset.channelId;
+                this.selectedMessages.set(messageId, channelId);
+            }
         });
 
         this.updateSelectionUI();

@@ -284,7 +284,10 @@ class MediaViewerScreen extends BaseScreen {
                         </div>
                     </div>
                 </div>
-                <span id="mediaDetails"></span>
+                <div class="media-details">
+                    <span id="mediaDetails"></span>
+                    <button id="jumpToMessage" class="jump-btn">Jump to Message</button>
+                </div>
                 <div class="filter-controls">
                     <label><input type="checkbox" id="filterDuplicates" ${this.filterDuplicates ? 'checked' : ''}> Filter Duplicates</label>
                 </div>
@@ -679,7 +682,23 @@ class MediaViewerScreen extends BaseScreen {
             return;
         }
 
-        channelList.innerHTML = channels.map(channel => {
+        // Start with the All DMs option if we're rendering DM channels
+        const isDMList = channels.length > 0 && channels[0].type === 'dm';
+        let html = '';
+        
+        if (isDMList) {
+            html += `
+                <div class="channel-item all-dms" 
+                    data-channel-type="all-dms"
+                    data-channel-name="All Direct Messages">
+                    <span class="channel-icon">📑</span>
+                    <span class="channel-name">All Direct Messages</span>
+                </div>
+                <div class="channels-divider">Individual DMs</div>
+            `;
+        }
+
+        html += channels.map(channel => {
             if (channel.type === 'dm') {
                 return `
                     <div class="channel-item" 
@@ -707,6 +726,8 @@ class MediaViewerScreen extends BaseScreen {
             }
         }).join('');
 
+        channelList.innerHTML = html;
+
         // Add click handlers
         channelList.querySelectorAll('.channel-item').forEach(item => {
             if (item.closest('.server-header')) {
@@ -731,12 +752,25 @@ class MediaViewerScreen extends BaseScreen {
                         name: item.dataset.channelName
                     });
                 });
+            } else if (item.dataset.channelType === 'all-dms') {
+                item.addEventListener('click', () => {
+                    this.selectChannel({
+                        type: 'all-dms',
+                        name: 'All Direct Messages'
+                    });
+                });
             }
         });
     }
 
     resetView() {
         // Add this at the start of resetView to prevent further loading
+        if (this.isLoading) {
+            Console.warn('Please wait for content to finish loading before going back');
+            console.log('Back button clicked while loading');
+            return;
+        }
+
         this.isLoading = false;  // Stop any ongoing loading
         this.hasMoreMedia = false;  // Prevent further loading attempts
         this.selectedChannel = null;  // Clear selected channel
@@ -780,14 +814,26 @@ class MediaViewerScreen extends BaseScreen {
         this.mediaList = [];
         this.currentIndex = 0;
         this.currentOffset = 0;
-        this.hasMoreMedia = true;
         this.mediaCache.clear();
         this.mediaHashes.clear();
         this.preloadingIndexes.clear();
         this.savedFiles = [];
         this.initialMediaList = [];
-        this.clearAutoplayTimer();
+        this.knownContentHashes.clear();
         
+        // Clear any existing autoplay timer
+        this.clearAutoplayTimer();
+
+        document.querySelectorAll('img[src^="blob:"], video[src^="blob:"]').forEach(element => {
+            if (element.src) {
+                URL.revokeObjectURL(element.src);
+            }
+            if (element instanceof HTMLVideoElement) {
+                element.pause();
+                element.src = '';
+                element.load();
+            }
+        });
         // Remove the media viewer content entirely
         const mediaViewerContent = this.container.querySelector('.media-viewer-content');
         if (mediaViewerContent) {
@@ -808,6 +854,16 @@ class MediaViewerScreen extends BaseScreen {
         if (searchInput) {
             searchInput.value = '';
         }
+   if (this.keyboardListener) {
+        document.removeEventListener('keydown', this.keyboardListener);
+        this.keyboardListener = null;
+    }
+
+    // Clear resize observer
+    if (this.currentResizeObserver) {
+        this.currentResizeObserver.disconnect();
+        this.currentResizeObserver = null;
+    }
 
         // After showing the channel selection, restore the previous state
         document.querySelector('.channel-selection').classList.remove('hidden');
@@ -826,10 +882,14 @@ class MediaViewerScreen extends BaseScreen {
     async displayCurrentMedia() {
         if (!this.mediaList.length) return;
 
+        // Clear any existing autoplay timer when displaying new media
+        this.clearAutoplayTimer();
+
         const mediaContent = document.querySelector('#mediaContent');
         const currentMedia = this.mediaList[this.currentIndex];
         const counter = document.querySelector('#mediaCounter');
         const details = document.querySelector('#mediaDetails');
+        const jumpButton = document.querySelector('#jumpToMessage');
 
         if (!currentMedia?.url) {
             Console.error('Invalid media item at index', this.currentIndex);
@@ -841,7 +901,28 @@ class MediaViewerScreen extends BaseScreen {
 
         const date = new Date(currentMedia.timestamp).toLocaleString();
         const size = currentMedia.size ? `${(currentMedia.size / 1024 / 1024).toFixed(2)}MB` : '';
-        details.textContent = `${currentMedia.filename} ${size ? `(${size})` : ''} - ${date}`;
+        
+        // Create clickable media details with all information included
+        if (currentMedia.messageId && currentMedia.channelId) {
+            details.innerHTML = `<span class="media-filename-link">
+                ${currentMedia.filename} ${size ? `(${size})` : ''} - ${date}
+            </span>`;
+            
+            // Add click handler directly to the element
+            const linkElement = details.querySelector('.media-filename-link');
+            if (linkElement) {
+                linkElement.addEventListener('click', () => {
+                    this.handleMessageJump(currentMedia.channelId, currentMedia.messageId);
+                });
+            }
+        } else {
+            details.textContent = `${currentMedia.filename} ${size ? `(${size})` : ''} - ${date}`;
+        }
+
+        // Hide the separate jump button since we now have the clickable details
+        if (jumpButton) {
+            jumpButton.style.display = 'none';
+        }
 
         try {
             // Clear existing content and any previous observers
@@ -871,8 +952,13 @@ class MediaViewerScreen extends BaseScreen {
                     }
                 });
             } else if (this.autoplayVideos) {
-                // Only start timer for non-video media
-                this.startAutoplayTimer();
+                // Only start timer for non-video media after a short delay
+                // This prevents race conditions during navigation
+                setTimeout(() => {
+                    if (this.currentIndex === this.mediaList.indexOf(currentMedia)) {
+                        this.startAutoplayTimer();
+                    }
+                }, 100);
             }
 
             // Set initial styles
@@ -964,6 +1050,7 @@ class MediaViewerScreen extends BaseScreen {
     }
 
     async loadMedia(reset = true) {
+        console.log("loadMediacalled", reset);
         if (!this.selectedChannel) {
             Console.log('No channel selected, stopping media load');
             return;
@@ -979,6 +1066,7 @@ class MediaViewerScreen extends BaseScreen {
 
         try {
             this.isLoading = true;
+            
             let foundMatchingMedia = false;
             let attempts = 0;
             const MAX_ATTEMPTS = 100;
@@ -1004,7 +1092,22 @@ class MediaViewerScreen extends BaseScreen {
                 this.lastFetchTime = Date.now();
                 
                 let response;
-                if (this.selectedChannel.type === 'server-all') {
+                if (this.selectedChannel.type === 'all-dms') {
+                    // Special handling for all-dms using cursor
+                    response = await this.api.getAllDMsMedia({
+                        cursor: this.currentOffset ? {
+                            timestamp: this.currentOffset,
+                            type: "timestamp"
+                        } : null,
+                        mediaTypes: this.mediaTypes,
+                        limit: 25
+                    });
+                    
+                    this.hasMoreMedia = response.hasMore;
+                    // Only update cursor if we got items, otherwise we're at the end
+                    this.currentOffset = response.cursor?.timestamp || null;
+
+                } else if (this.selectedChannel.type === 'server-all') {
                     response = await this.api.getGuildMedia(
                         this.selectedChannel.id,
                         {
@@ -1031,8 +1134,11 @@ class MediaViewerScreen extends BaseScreen {
                     );
                 }
 
-                this.hasMoreMedia = response.hasMore;
-                this.currentOffset = response.offset;
+                // Update offset and hasMore for non-all-dms cases
+                if (this.selectedChannel.type !== 'all-dms') {
+                    this.hasMoreMedia = response.hasMore;
+                    this.currentOffset = response.offset;
+                }
 
                 if (!response.media?.length) {
                     attempts++;
@@ -1229,6 +1335,9 @@ class MediaViewerScreen extends BaseScreen {
     }
 
     async navigateMedia(direction) {
+        // Clear autoplay timer at the start of navigation
+        this.clearAutoplayTimer();
+        
         if (!this.mediaList.length) return;
 
         const newIndex = this.currentIndex + direction;
@@ -1418,7 +1527,10 @@ class MediaViewerScreen extends BaseScreen {
         // Only set timer for non-video media
         if (currentMedia.type !== 'video') {
             this.autoplayTimer = setTimeout(() => {
-                this.navigateMedia(1);
+                // Double check we're still on the same media before navigating
+                if (this.currentIndex === this.mediaList.indexOf(currentMedia)) {
+                    this.navigateMedia(1);
+                }
             }, this.autoplayDelay * 1000);
         }
     }
@@ -1644,6 +1756,33 @@ class MediaViewerScreen extends BaseScreen {
             }
         }
         return 'Unknown';
+    }
+
+    // Add the handleMessageJump method
+    async handleMessageJump(channelId, messageId) {
+        // Check if this is a DM channel (either direct or from all-dms) and if it's not open
+        if ((this.selectedChannel.type === 'dm' || this.selectedChannel.type === 'all-dms') && 
+            !this.cachedDMs?.some(dm => dm.id === channelId)) {
+            Console.log('DM channel not open, attempting to open...');
+            try {
+                const result = await this.api.openDM(channelId);
+                
+                if (result && result.recipients && result.recipients[0]) {
+                    const username = result.recipients[0].username;
+                    Console.success(`Successfully opened DM with ${username}`);
+                } else {
+                    Console.error('Failed to open DM channel');
+                    return;
+                }
+            } catch (error) {
+                Console.error('Error opening DM channel:', error);
+                return;
+            }
+        }
+
+        // Jump to the message
+        const { shell } = require('@electron/remote');
+        shell.openExternal(`discord://discord.com/channels/@me/${channelId}/${messageId}`);
     }
 }
 

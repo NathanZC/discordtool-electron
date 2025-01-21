@@ -162,8 +162,9 @@
 }
 
 .media-controls {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 20px;
     align-items: center;
     padding: 10px 20px;
     background: #2F3136;
@@ -256,9 +257,9 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    max-width: 300px;
-    margin: 0 auto;
-    padding-left: 10px;
+    padding: 0;
+    margin: 0;
+    white-space: nowrap;
 }
 
 .save-location button {
@@ -271,6 +272,7 @@
     font-size: 14px;
     transition: all 0.2s ease;
     white-space: nowrap;
+    min-width: 140px;
 }
 
 .save-location button:hover {
@@ -285,11 +287,11 @@
 
 #currentSaveLocation {
     color: #dcddde;
-    font-size: 12px;
+    font-size: 13px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 150px;
+    max-width: 200px;
 }
 
 .media-container {
@@ -638,4 +640,123 @@
 
 .delete-selected.stopping:hover {
     background-color: #d84040;
+}
+
+/* Update these styles */
+.media-filename-link {
+    display: inline-block;
+    background-color: #4752C4;  /* Darker Discord blue */
+    color: #ffffff;  /* White text */
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    font-size: 14px;
+}
+
+.media-filename-link:hover {
+    background-color: #5865F2;  /* Lighter Discord blue on hover */
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.media-filename-link:hover::after {
+    content: 'Jump to media in Discord';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 8px;
+    background-color: #18191c;
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.media-filename-link:hover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 4px;
+    border: 6px solid transparent;
+    border-top-color: #18191c;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+.media-filename-link:active {
+    transform: translateY(0);
+}
+
+/* Add these styles for the jump button */
+.jump-btn {
+    background: #4752C4;
+    color: #ffffff;
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.jump-btn:hover {
+    background: #5865F2;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.jump-btn:active {
+    transform: translateY(0);
+}
+
+.jump-btn:hover::after {
+    content: 'Jump to media in Discord';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 8px;
+    background-color: #18191c;
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.jump-btn:hover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 4px;
+    border: 6px solid transparent;
+    border-top-color: #18191c;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+/* Update the media-details class to properly position the button */
+.media-details {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
 }
