@@ -2,6 +2,16 @@
 
 A powerful desktop application for managing Discord data and messages. Built with Electron for performance and reliability.
 
+## Download
+
+### Latest Release: v2.0.2 - Discord Tool
+
+Fast and efficient Discord data manager with enhanced search, media downloading, and message management capabilities. Built for performance and ease of use.
+
+[Download for Windows](https://github.com/NathanZC/discordtool-electron/releases/download/v2.0.2/discord-tool.Setup.2.0.2.exe)
+
+*Note: Requires Discord token for authentication. All operations are client-side.*
+
 ## Key Features
 
 ### Enhanced Search
@@ -64,16 +74,6 @@ npm run build
 - `↓` Undo last save
 - `S` Save all loaded media
 - `F` Toggle fullscreen
-
-## Download
-
-### Latest Release: v2.0.2 - Discord Tool
-
-Fast and efficient Discord data manager with enhanced search, media downloading, and message management capabilities. Built for performance and ease of use.
-
-[Download for Windows](https://github.com/NathanZC/discordtool-electron/releases/download/v2.0.2/discord-tool.Setup.2.0.2.exe)
-
-*Note: Requires Discord token for authentication. All operations are client-side.*
 
 ## License
 
