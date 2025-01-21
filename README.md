@@ -67,6 +67,14 @@ npm run build
 
 ## Download
 
+### Latest Release: v2.0.2 - Discord Tool
+
+Fast and efficient Discord data manager with enhanced search, media downloading, and message management capabilities. Built for performance and ease of use.
+
+[Download for Windows](https://github.com/NathanZC/discordtool-electron/releases/download/v2.0.2/discord-tool.Setup.2.0.2.exe)
+
+*Note: Requires Discord token for authentication. All operations are client-side.*
+
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
