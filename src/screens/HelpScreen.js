@@ -17,9 +17,10 @@ class HelpScreen extends BaseScreen {
                             <ul>
                                 <li><a href="#open-dms">View Open DMs</a></li>
                                 <li><a href="#servers">Accessible Servers</a></li>
-                                <li><a href="#closed-dms">Find Closed DMs</a></li>
                                 <li><a href="#media">Media Viewer</a></li>
+                                <li><a href="#search">Enhanced Search</a></li>
                                 <li><a href="#wiper">Message Wiper</a></li>
+                                <li><a href="#closed-dms">Find Closed DMs</a></li>
                             </ul>
                         </li>
                         <li><a href="#help">Need Help?</a></li>
@@ -57,122 +58,171 @@ class HelpScreen extends BaseScreen {
                         
                         <div id="open-dms" class="feature-block">
                             <h3>View Open DMs</h3>
-                            <p>Manage and delete messages from your active direct message channels:</p>
-                            <ul class="feature-list">
-                                <li>Select multiple DMs using checkboxes</li>
-                                <li>Set message deletion filters (date range, specific text)</li>
-                                <li>Option to automatically close DMs after deletion</li>
-                                <li>Adjustable delay between operations</li>
-                                <li>View message counts before deleting</li>
-                            </ul>
-                        </div>
-                        
-                        <div id="servers" class="feature-block">
-                            <h3>Accessible Servers</h3>
-                            <p>Manage messages across servers you have access to:</p>
-                            <ul class="feature-list">
-                                <li>Batch delete messages from multiple servers</li>
-                                <li>Filter by date range and message content</li>
-                                <li>Target specific channels using Channel ID</li>
-                                <li>Option to leave servers after deletion</li>
-                                <li>Filter messages by user ID</li>
-                            </ul>
+                            <p>Perfect for cleaning up your active direct message conversations and managing your DM history.</p>
+                            
                             <div class="tip-box">
-                                <strong>Getting Channel IDs:</strong> 
-                                Enable Developer Mode in Discord Settings > App Settings > Advanced, 
-                                then right-click any channel and select "Copy Channel ID"
-                            </div>
-                        </div>
-                        
-                        <div id="closed-dms" class="feature-block">
-                            <h3>Find Closed DMs</h3>
-                            <p>Search through your Discord data file to find closed DMs and reopen them:</p>
-                            <ul class="feature-list">
-                                <li>Upload your Discord data file to search through past DMs</li>
-                                <li>Filter and search through your DM history</li>
-                                <li>Batch open multiple DMs at once</li>
-                            </ul>
-
-                            <div class="tip-box">
-                                <strong>Batch Opening DMs:</strong>
+                                <strong>When to Use:</strong>
                                 <ul class="feature-list">
-                                    <li>Discord limits DM opening to 100 channels per batch</li>
-                                    <li>Use the index controls to open DMs in batches (e.g., 1-100, 101-200)</li>
-                                    <li>Wait a few minutes between batches to avoid rate limits</li>
-                                    <li>Use the "Select All" button to quickly select the current batch</li>
+                                    <li>Clean up conversations with specific users</li>
+                                    <li>Bulk delete messages across multiple DMs</li>
+                                    <li>Remove messages from a specific time period</li>
+                                    <li>Automatically close inactive DMs after cleaning</li>
                                 </ul>
                             </div>
 
                             <div class="tip-box">
-                                <strong>Tips:</strong>
+                                <strong>Best Practices:</strong>
                                 <ul class="feature-list">
-                                    <li>Use filters to find specific users or date ranges</li>
-                                    <li>The message count shows how many messages were in each DM</li>
-                                    <li>Successfully opened DMs will be marked in green</li>
-                                    <li>Failed attempts will be marked in red</li>
+                                    <li>Use date filters to target specific time periods</li>
+                                    <li>Enable "Close DM" option for inactive conversations</li>
+                                    <li>Start with a higher delay for safer operation (avoid rate limits</li>
+                                    <li>Use search to find specific users quickly</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div id="servers" class="feature-block">
+                            <h3>Accessible Servers</h3>
+                            <p>Manage your message history across servers you have access to, with powerful filtering options.</p>
+
+                            <div class="tip-box">
+                                <strong>When to Use:</strong>
+                                <ul class="feature-list">
+                                    <li>Clean up messages from servers you're leaving</li>
+                                    <li>Remove messages from specific channels</li>
+                                    <li>Bulk delete messages across multiple servers</li>
+                                    <li>Target messages containing specific content</li>
+                                </ul>
+                            </div>
+
+                            <div class="tip-box">
+                                <strong>Best Practices:</strong>
+                                <ul class="feature-list">
+                                    <li>Use Channel ID for targeting specific channels</li>
+                                    <li>Enable "Leave Server" for servers you're done with</li>
+                                    <li>Use "Only Me" to focus on your messages</li>
+                                    <li>Set reasonable delays to avoid rate limits</li>
                                 </ul>
                             </div>
                         </div>
                         
                         <div id="media" class="feature-block">
                             <h3>Media Viewer</h3>
-                            <p>Browse and download media from your channels and DMs:</p>
-                            <ul class="feature-list">
-                                <li>View images, videos, and GIFs from any channel</li>
-                                <li>Filter media types (images/videos/GIFs)</li>
-                                <li>Autoplay functionality with adjustable delay</li>
-                                <li>Batch download capabilities</li>
-                                <li>Duplicate content detection</li>
-                            </ul>
+                            <p>Browse and download media from your Discord conversations with smart caching and organization.</p>
 
                             <div class="tip-box">
-                                <strong>Keyboard Shortcuts:</strong>
+                                <strong>When to Use:</strong>
                                 <ul class="feature-list">
-                                    <li>← / →: Navigate between media</li>
-                                    <li>↑: Save current media and go to next</li>
-                                    <li>↓: Undo last save</li>
-                                    <li>S: Save all media in current view</li>
+                                    <li>Bulk download media from channels</li>
+                                    <li>Save important media from conversations</li>
+                                    <li>Find and organize shared content quickly with lower loading times</li>
+                                    <li>Review media history with specific users or all dms at once</li>
                                 </ul>
-                                <p class="note">Set a save location before using download features</p>
                             </div>
 
                             <div class="tip-box">
-                                <strong>Features:</strong>
+                                <strong>Key Controls:</strong>
                                 <ul class="feature-list">
-                                    <li>Video volume control and autoplay settings</li>
-                                    <li>Smart content loading with preloading</li>
-                                    <li>Optional duplicate filtering</li>
-                                    <li>Easy channel/server navigation</li>
-                                    <li>Search functionality for finding specific channels</li>
+                                    <li>←/→: Navigate between media</li>
+                                    <li>↑: Save current and go to next</li>
+                                    <li>↓: Undo last save</li>
+                                    <li>S: Save all media that is loaded</li>
+                                    <li>F: Toggle fullscreen</li>
+                                </ul>
+                            </div>
+
+                            <div class="tip-box">
+                                <strong>Best Practices:</strong>
+                                <ul class="feature-list">
+                                    <li>Set save location before starting downloads</li>
+                                    <li>Use filters to find specific types of media</li>
+                                    <li>Enable duplicate detection to avoid duplicates</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div id="search" class="feature-block">
+                            <h3>Enhanced Search</h3>
+                            <p>The Enhanced Search feature provides powerful tools to search through all your Discord DM messages, with advanced filtering and bulk deletion capabilities.</p>
+
+                            <div class="tip-box">
+                                <strong>When to Use:</strong>
+                                <ul class="feature-list">
+                                    <li>Find specific messages or conversations</li>
+                                    <li>Clean up messages matching certain criteria</li>
+                                    <li>Locate and manage shared content</li>
+                                    <li>Review message history by type</li>
+                                </ul>
+                            </div>
+
+                            <div class="tip-box">
+                                <strong>Search Tips:</strong>
+                                <ul class="feature-list">
+                                    <li>Use date ranges for targeted searches</li>
+                                    <li>Filter by content type (images, links, etc.)</li>
+                                    <li>Combine filters for precise results</li>
+                                    <li>Use "Only Me" for your messages</li>
+                                </ul>
+                            </div>
+
+                            <div class="tip-box">
+                                <strong>Best Practices:</strong>
+                                <ul class="feature-list">
+                                    <li>Start with broad searches, then refine</li>
+                                    <li>Review message count before bulk operations</li>
+                                    <li>Use tabs to organize different content types</li>
+                                    <li>Allow time for results to fully load</li>
                                 </ul>
                             </div>
                         </div>
                         
                         <div id="wiper" class="feature-block">
                             <h3>Message Wiper</h3>
-                            <p>Advanced tools for removing messages from your account:</p>
-                            <ul class="feature-list">
-                                <li>Upload Discord data to view all message history</li>
-                                <li>Track deletion progress with detailed statistics</li>
-                                <li>Filter channels by type (DM/Server)</li>
-                                <li>Save channel states for long-term operations</li>
-                            </ul>
+                            <p>A comprehensive tool for removing messages from your account using your Discord data file.</p>
 
                             <div class="tip-box">
-                                <strong>Channel States:</strong>
+                                <strong>When to Use:</strong>
                                 <ul class="feature-list">
-                                    <li>Unmarked (Default): Channel hasn't been processed yet</li>
-                                    <li>Green: Successfully wiped messages from this channel</li>
-                                    <li>Red: Unable to wipe messages (e.g., no longer in server)</li>
-                                    <li>Locked: Channel will be skipped during wiping operations</li>
+                                    <li>Complete account message cleanup</li>
+                                    <li>Process closed or inaccessible channels</li>
+                                    <li>Track deletion progress across sessions</li>
+                                    <li>Manage large-scale message deletion</li>
                                 </ul>
-                                <p>Channel states persist between sessions, allowing you to:</p>
+                            </div>
+
+                            <div class="tip-box">
+                                <strong>Best Practices:</strong>
                                 <ul class="feature-list">
-                                    <li>Close the program and continue progress later</li>
                                     <li>Lock channels you want to preserve</li>
-                                    <li>Track which channels have been completed</li>
+                                    <li>Use filters to organize your view</li>
+                                    <li>Monitor progress in the console for rate limits or other issues (unlikely but can happen)</li>
+                                    <li>Keep the delay at least 2 seconds to avoid rate limits</li>
                                 </ul>
-                                <p class="note">States can be reset using the "Reset States" button if needed</p>
+                            </div>
+                        </div>
+                        
+                        <div id="closed-dms" class="feature-block">
+                            <h3>Find Closed DMs</h3>
+                            <p>Locate and reopen closed DM channels using your Discord data file.</p>
+
+                            <div class="tip-box">
+                                <strong>When to Use:</strong>
+                                <ul class="feature-list">
+                                    <li>Recover old conversations</li>
+                                    <li>Find specific users from past DMs</li>
+                                    <li>Batch reopen many at once DMs</li>
+                                    <li>Review past DM history</li>
+                                </ul>
+                            </div>
+
+                            <div class="tip-box">
+                                <strong>Best Practices:</strong>
+                                <ul class="feature-list">
+                                    <li>Process DMs in batches of 100 or less (dicord has a limit of 1000 open dms at a time)</li>
+                                    <li>Wait between batches to avoid rate limits</li>
+                                    <li>Use filters to find specific users</li>
+                                    <li>Check message counts before reopening</li>
+                                </ul>
                             </div>
                         </div>
                     </section>

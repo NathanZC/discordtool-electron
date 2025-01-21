@@ -1,6 +1,6 @@
 {
   "name": "discord-tool",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A helper application for managing Discord accounts",
   "private": true,
   "author": "Nate",

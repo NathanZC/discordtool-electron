@@ -7,6 +7,8 @@ const { dialog } = require('@electron/remote');
 class MediaViewerScreen extends BaseScreen {
     constructor(token, userId, preloadedData = null) {
         super(token);
+        this.zIndex = 4; // This will place it after Open DMs (1), Accessible Servers (2), and Media Viewer (3)
+        
         this.api = new DiscordAPI(token, userId);
         this.store = new Store();
         
