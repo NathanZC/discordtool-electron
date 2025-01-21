@@ -20,6 +20,7 @@ Fast and efficient Discord data manager with enhanced search, media downloading,
 - Bulk message management and deletion
 - Real-time search updates with progressive loading
 - Direct message jumping capability
+![discord-tool-preview1](https://github.com/user-attachments/assets/1f0f19a8-3ebe-4c68-b049-0f4efd67d901)
 
 ### Media Viewer
 - Fast media browsing with smart caching and preloading
@@ -34,9 +35,11 @@ Fast and efficient Discord data manager with enhanced search, media downloading,
 - **Closed DMs**: Recover and manage archived conversations
 - **Message Wiper**: Comprehensive message deletion tools
 - Advanced filtering options for precise control
+![discord-tool-preview2](https://github.com/user-attachments/assets/38c11b5a-5089-4659-a44d-d3167b97dc69)
 
 ### Smart Features
 - Secure token-based authentication
+- multi account managment (save and manage unlimited accounts)
 - Automatic rate limit handling
 - Progress tracking for long operations
 - Local caching for improved performance
