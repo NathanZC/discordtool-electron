@@ -2,6 +2,12 @@
 
 A powerful desktop application for managing Discord data and messages. Built with Electron for performance and reliability.
 
+## ⚠️ Important Notice
+
+This tool operates as a self-bot when interacting with the Discord API to manage messages and data. Using self-bots is against Discord's Terms of Service and there is a risk of account action, however, it is small.
+
+*Use this tool at your own discretion.*
+
 ## Download
 
 ### Latest Release: v2.0.2 - Discord Tool
