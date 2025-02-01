@@ -14,7 +14,7 @@ This tool operates as a self-bot when interacting with the Discord API to manage
 
 Fast and efficient Discord data manager with enhanced search, media downloading, and message management capabilities. Built for performance and ease of use.
 
-[Download for Windows](https://github.com/NathanZC/discordtool-electron/releases/download/v2.0.2/discord-tool.Setup.2.0.2.exe)
+[Download for Windows](https://github.com/NathanZC/discordtool-electron/releases/download/v2.0.3/discord-tool.Setup.2.0.3.exe)
 
 *Note: Requires Discord token for authentication. All operations are client-side.*
 
