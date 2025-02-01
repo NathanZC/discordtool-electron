@@ -185,14 +185,21 @@
 }
 
 #console-content {
-    width: 450px;
-    min-width: 450px;
+    width: 350px;
+    min-width: 350px;
     height: 100vh;
     background-color: #2f3136;
     border-left: 1px solid #202225;
     display: flex;
     flex-direction: column;
     padding: 1rem;
+}
+
+@media (min-width: 1500px) {
+    #console-content {
+        width: 450px;
+        min-width: 450px;
+    }
 }
 
 .screen-container {

@@ -147,11 +147,19 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 10px;
+    gap: 12px;
+    padding: 0 4px;
+}
+
+.console-header h2 {
+    margin: 0;
+    white-space: nowrap;
 }
 
 .console-settings {
     display: flex;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .checkbox-container {
@@ -250,4 +258,54 @@
 .checkbox-container:hover::before {
     opacity: 1;
     visibility: visible;
+}
+
+/* Add these new styles */
+.app-layout {
+    position: relative;
+    display: flex;
+}
+
+.sidebar {
+    width: 250px;
+    transition: transform 0.3s ease;
+    background: #2C2F33;
+    height: 100vh;
+    position: relative;
+}
+
+.sidebar.collapsed {
+    transform: translateX(-250px);
+}
+
+.toggle-nav {
+    position: absolute;
+    right: -15px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #7289DA;
+    border: none;
+    width: 15px;
+    height: 80px;
+    cursor: pointer;
+    border-radius: 0 4px 4px 0;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.toggle-nav:hover {
+    background: #677BC4;
+}
+
+#main-content {
+    flex: 1;
+    transition: margin-left 0.3s ease;
+    margin-left: 0;
+}
+
+#main-content.expanded {
+    margin-left: -250px;
 }

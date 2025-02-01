@@ -259,7 +259,6 @@
     gap: 12px;
     padding: 0;
     margin: 0;
-    white-space: nowrap;
 }
 
 .save-location button {
@@ -377,6 +376,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    flex-wrap: nowrap;
 }
 
 #mediaCounter {
@@ -787,4 +787,332 @@
 .media-viewer-content.fullscreen .media-content video {
     max-height: calc(100vh - 200px);
     max-width: 100%;
+}
+
+/* Add responsive styles for smaller displays */
+@media screen and (max-width: 1919px) {
+    /* Adjust channel selection for smaller screens */
+    .channel-selection {
+        padding: 15px;
+        max-width: 100%;
+    }
+
+    .channel-selection h1 {
+        margin-bottom: 15px;
+        font-size: 24px;
+    }
+
+    /* Make source buttons more compact */
+    .source-btn {
+        padding: 8px 15px;
+        min-width: 140px;
+        font-size: 14px;
+    }
+
+    /* Adjust media controls layout */
+    .media-controls {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 10px;
+    }
+
+    /* Stack controls vertically on smaller screens */
+    .media-types {
+        grid-template-columns: 1fr;
+        border: none;
+        border-top: 2px solid #40444B;
+        border-bottom: 2px solid #40444B;
+        padding: 10px 0;
+    }
+
+    .media-type-checkboxes {
+        flex-direction: row;
+        justify-content: center;
+        gap: 15px;
+    }
+
+    .autoplay-controls {
+        flex-direction: row;
+        justify-content: center;
+        gap: 15px;
+        align-items: center;
+    }
+
+    .volume-control {
+        justify-content: center;
+        border: none;
+        padding: 0;
+    }
+
+    /* Adjust media container for smaller screens */
+    .media-container {
+        height: calc(100vh - 300px);
+        gap: 10px;
+    }
+
+    .media-content {
+        width: calc(100% - 80px);
+    }
+
+    /* Make navigation buttons smaller */
+    .nav-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+    }
+
+    #prevMedia {
+        left: 10px;
+    }
+
+    #nextMedia {
+        right: 10px;
+    }
+
+    /* Adjust media info section */
+    .media-info {
+        padding: 10px;
+        gap: 10px;
+    }
+
+    .media-info-left {
+        gap: 8px;
+        min-width: 0; /* Allow content to shrink */
+    }
+
+    #mediaCounter {
+        white-space: nowrap;
+    }
+
+    /* Ensure filter duplicates checkbox stays inline */
+    .media-type-checkboxes {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: nowrap;
+    }
+
+    .media-type-checkboxes label {
+        white-space: nowrap;
+    }
+
+    /* Adjust save location for better wrapping */
+    .save-location {
+        width: auto;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 8px;
+    }
+
+    .save-location button {
+        min-width: auto;
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    #currentSaveLocation {
+        flex: 1;
+        min-width: 100px;
+        max-width: none;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    /* Ensure media content stays centered */
+    .media-content {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Center channel name */
+    #channelName {
+        text-align: center;
+        padding: 0;
+    }
+
+    /* Adjust channel list height */
+    .channel-list {
+        max-height: calc(100vh - 250px);
+    }
+
+    /* Make server channels more compact */
+    .server-channels {
+        margin-left: 15px;
+    }
+
+    .server-channels .channel-item {
+        padding: 8px 12px;
+    }
+
+    /* Adjust fullscreen mode for smaller screens */
+    .media-viewer-content.fullscreen .media-container {
+        height: calc(100vh - 220px);
+    }
+
+    .media-viewer-content.fullscreen .media-content {
+        width: calc(100% - 80px);
+    }
+}
+
+/* Additional adjustments for very small screens */
+@media screen and (max-width: 640px) {
+    .source-buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .source-btn {
+        width: 100%;
+    }
+
+    .media-type-checkboxes {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .autoplay-controls {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .media-container {
+        height: calc(100vh - 400px);
+    }
+
+    .channel-item {
+        padding: 10px 12px;
+    }
+
+    .media-controls {
+        padding: 8px;
+    }
+
+    .save-location {
+        gap: 6px;
+    }
+
+    .save-location button {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+}
+
+/* Add new breakpoint for very small screens */
+@media screen and (max-width: 480px) {
+    .channel-selection {
+        padding: 10px;
+    }
+
+    .channel-selection h1 {
+        font-size: 20px;
+    }
+
+    .media-controls {
+        padding: 6px;
+    }
+
+    .media-type-checkboxes label,
+    .autoplay-controls label {
+        font-size: 11px;
+    }
+
+    .media-container {
+        height: calc(100vh - 450px);
+    }
+
+    .nav-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
+    }
+
+    .media-content {
+        width: calc(100% - 60px);
+    }
+
+    #prevMedia {
+        left: 5px;
+    }
+
+    #nextMedia {
+        right: 5px;
+    }
+
+    .save-location {
+        width: 100%;
+    }
+
+    #currentSaveLocation {
+        font-size: 11px;
+    }
+
+    .shortcuts-info {
+        font-size: 11px;
+        padding: 3px 6px;
+    }
+
+    .media-filename-link {
+        font-size: 12px;
+        padding: 3px 6px;
+    }
+
+    /* Improve touch targets */
+    .channel-item {
+        padding: 12px 10px;
+    }
+
+    .media-type-checkboxes input[type="checkbox"],
+    .autoplay-controls input[type="checkbox"] {
+        width: 14px;
+        height: 14px;
+    }
+
+    .media-info-left {
+        font-size: 12px;
+    }
+
+    .media-type-checkboxes label {
+        font-size: 12px;
+    }
+}
+
+/* Add new breakpoint for extremely small screens */
+@media screen and (max-width: 360px) {
+    .media-controls {
+        gap: 6px;
+    }
+
+    .media-type-checkboxes {
+        gap: 8px;
+    }
+
+    .media-container {
+        height: calc(100vh - 500px);
+    }
+
+    .save-location button {
+        width: 100%;
+        margin-bottom: 4px;
+    }
+
+    #currentSaveLocation {
+        width: 100%;
+        text-align: center;
+    }
+
+    .media-info {
+        gap: 6px;
+    }
+
+    .shortcuts-content {
+        min-width: 160px;
+    }
+
+    .shortcut-item {
+        font-size: 11px;
+    }
 }

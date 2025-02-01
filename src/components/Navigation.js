@@ -38,6 +38,7 @@ class Navigation {
         if (userData) {
             this.updateUserInfo(userData);
         }
+        this.isNavCollapsed = false;
     }
 
     updateUserInfo(userData) {
@@ -60,10 +61,13 @@ class Navigation {
     render() {
         const content = document.getElementById('content');
         
-        // Create the app layout with proper sidebar structure
+        // Update the app layout HTML to include the toggle button
         content.innerHTML = `
             <div class="app-layout">
                 <nav class="sidebar">
+                    <button class="toggle-nav" title="Toggle Navigation">
+                        ◀
+                    </button>
                     <div class="brand">
                         <div class="logo">DT</div>
                         <div class="brand-text">Discord Tool</div>
@@ -141,6 +145,20 @@ class Navigation {
                     menuItem.classList.add('active');
                 }
             }
+        });
+
+        // Add new toggle navigation event listener
+        const toggleNav = document.querySelector('.toggle-nav');
+        toggleNav.addEventListener('click', () => {
+            const sidebar = document.querySelector('.sidebar');
+            const mainContent = document.getElementById('main-content');
+            this.isNavCollapsed = !this.isNavCollapsed;
+            
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+            
+            // Update toggle button text
+            toggleNav.textContent = this.isNavCollapsed ? '▶' : '◀';
         });
     }
 
