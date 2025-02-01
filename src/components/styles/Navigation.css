@@ -280,12 +280,12 @@
 
 .toggle-nav {
     position: absolute;
-    right: -15px;
+    right: -12px;
     top: 50%;
     transform: translateY(-50%);
     background: #7289DA;
     border: none;
-    width: 15px;
+    width: 12px;
     height: 80px;
     cursor: pointer;
     border-radius: 0 4px 4px 0;

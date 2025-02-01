@@ -66,7 +66,7 @@ class Navigation {
             <div class="app-layout">
                 <nav class="sidebar">
                     <button class="toggle-nav" title="Toggle Navigation">
-                        ◀
+                        ‹
                     </button>
                     <div class="brand">
                         <div class="logo">DT</div>
@@ -157,8 +157,8 @@ class Navigation {
             sidebar.classList.toggle('collapsed');
             mainContent.classList.toggle('expanded');
             
-            // Update toggle button text
-            toggleNav.textContent = this.isNavCollapsed ? '▶' : '◀';
+            // Update toggle button text with new symbols
+            toggleNav.textContent = this.isNavCollapsed ? '›' : '‹';
         });
     }
 
