@@ -4,7 +4,7 @@ A powerful desktop application for managing Discord data and messages. Built wit
 
 ## ⚠️ Important Notice
 
-This tool operates as a self-bot when interacting with the Discord API to manage messages and data. Using self-bots is against Discord's Terms of Service and there is a risk of account action, however, it is small.
+This tool operates as a self-bot when interacting with the Discord API to manage messages and data. Using self-bots is against Discord's Terms of Service and there is a risk of account action, however, it is small and there are currently no known bans for this.
 
 *Use this tool at your own discretion.*
 
